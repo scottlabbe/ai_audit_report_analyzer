@@ -22,31 +22,34 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-    if file and file.filename.lower().endswith('.pdf'):
-        filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
-        
-        # Parse PDF and analyze content
-        pdf_content = parse_pdf(file_path)
-        analysis_result = analyze_report(pdf_content)
-        
-        # Save to database
-        db = get_db()
-        report = Report(
-            file_name=filename,
-            content=analysis_result
-        )
-        db.add(report)
-        db.commit()
-        
-        return jsonify({'message': 'File uploaded and analyzed successfully', 'id': report.id}), 200
-    return jsonify({'error': 'Invalid file type'}), 400
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+        if file and file.filename.lower().endswith('.pdf'):
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            
+            # Parse PDF and analyze content
+            pdf_content = parse_pdf(file_path)
+            analysis_result = analyze_report(pdf_content)
+            
+            # Save to database
+            db = get_db()
+            report = Report(
+                file_name=filename,
+                content=analysis_result
+            )
+            db.add(report)
+            db.commit()
+            
+            return jsonify({'message': 'File uploaded and analyzed successfully', 'id': report.id}), 200
+        return jsonify({'error': 'Invalid file type'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/reports', methods=['GET'])
 def get_reports():
