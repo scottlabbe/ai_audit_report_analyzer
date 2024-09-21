@@ -48,15 +48,15 @@ def analyze_report(content):
             if key not in parsed_result:
                 raise ValueError(f"Missing required key in API response: {key}")
         
-        return parsed_result
+        return {"success": True, "data": parsed_result}
 
     except json.JSONDecodeError as e:
         logging.error(f"Error parsing JSON response: {e}")
         logging.error(f"Raw response: {result}")
-        return None
+        return {"success": False, "error": "Error parsing API response"}
     except ValueError as e:
         logging.error(f"Error in API response format: {e}")
-        return None
+        return {"success": False, "error": str(e)}
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
-        return None
+        return {"success": False, "error": "An unexpected error occurred"}

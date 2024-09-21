@@ -30,28 +30,45 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`/report/${id}`)
         .then(response => response.json())
         .then(report => {
+            if (report.error) {
+                throw new Error(report.error);
+            }
             displayReport(report);
-            fetchReports();
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error: ' + error.message);
+        });
     }
 
     function displayReport(report) {
+        const analysisResult = document.getElementById('analysisResult');
+        const resultContent = document.getElementById('resultContent');
+        const exportBtn = document.getElementById('exportBtn');
         const content = report.content;
+        
+        if (!content || typeof content !== 'object') {
+            resultContent.innerHTML = '<p class="text-red-500">Error: Invalid report data</p>';
+            analysisResult.classList.remove('hidden');
+            exportBtn.classList.add('hidden');
+            return;
+        }
+        
         resultContent.innerHTML = `
-            <h3 class="font-bold">${content.report_title}</h3>
-            <p><strong>Audit Organization:</strong> ${content.audit_organization}</p>
-            <p><strong>Audit Objectives:</strong> ${content.audit_objectives.join(', ')}</p>
-            <p><strong>Overall Conclusion:</strong> ${content.overall_conclusion}</p>
+            <h3 class="font-bold">${content.report_title || 'N/A'}</h3>
+            <p><strong>Audit Organization:</strong> ${content.audit_organization || 'N/A'}</p>
+            <p><strong>Audit Objectives:</strong> ${(content.audit_objectives || []).join(', ') || 'N/A'}</p>
+            <p><strong>Overall Conclusion:</strong> ${content.overall_conclusion || 'N/A'}</p>
             <h4 class="font-semibold mt-4">Key Findings:</h4>
-            <ul>${content.key_findings.map(f => `<li>${f}</li>`).join('')}</ul>
+            <ul>${(content.key_findings || []).map(f => `<li>${f}</li>`).join('') || '<li>N/A</li>'}</ul>
             <h4 class="font-semibold mt-4">Recommendations:</h4>
-            <ul>${content.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
-            <p><strong>AI-Generated Insight:</strong> ${content.llm_insight}</p>
+            <ul>${(content.recommendations || []).map(r => `<li>${r}</li>`).join('') || '<li>N/A</li>'}</ul>
+            <p><strong>AI-Generated Insight:</strong> ${content.llm_insight || 'N/A'}</p>
             <h4 class="font-semibold mt-4">Potential Future Audit Objectives:</h4>
-            <ul>${content.potential_audit_objectives.map(o => `<li>${o}</li>`).join('')}</ul>
+            <ul>${(content.potential_audit_objectives || []).map(o => `<li>${o}</li>`).join('') || '<li>N/A</li>'}</ul>
         `;
         analysisResult.classList.remove('hidden');
+        exportBtn.classList.remove('hidden');
         exportBtn.onclick = () => window.location.href = `/export/${report.id}`;
     }
 
@@ -77,9 +94,15 @@ function fetchReport(id) {
     fetch(`/report/${id}`)
     .then(response => response.json())
     .then(report => {
+        if (report.error) {
+            throw new Error(report.error);
+        }
         displayReport(report);
     })
-    .catch(error => console.error('Error:', error));
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error: ' + error.message);
+    });
 }
 
 function displayReport(report) {
@@ -87,19 +110,28 @@ function displayReport(report) {
     const resultContent = document.getElementById('resultContent');
     const exportBtn = document.getElementById('exportBtn');
     const content = report.content;
+    
+    if (!content || typeof content !== 'object') {
+        resultContent.innerHTML = '<p class="text-red-500">Error: Invalid report data</p>';
+        analysisResult.classList.remove('hidden');
+        exportBtn.classList.add('hidden');
+        return;
+    }
+    
     resultContent.innerHTML = `
-        <h3 class="font-bold">${content.report_title}</h3>
-        <p><strong>Audit Organization:</strong> ${content.audit_organization}</p>
-        <p><strong>Audit Objectives:</strong> ${content.audit_objectives.join(', ')}</p>
-        <p><strong>Overall Conclusion:</strong> ${content.overall_conclusion}</p>
+        <h3 class="font-bold">${content.report_title || 'N/A'}</h3>
+        <p><strong>Audit Organization:</strong> ${content.audit_organization || 'N/A'}</p>
+        <p><strong>Audit Objectives:</strong> ${(content.audit_objectives || []).join(', ') || 'N/A'}</p>
+        <p><strong>Overall Conclusion:</strong> ${content.overall_conclusion || 'N/A'}</p>
         <h4 class="font-semibold mt-4">Key Findings:</h4>
-        <ul>${content.key_findings.map(f => `<li>${f}</li>`).join('')}</ul>
+        <ul>${(content.key_findings || []).map(f => `<li>${f}</li>`).join('') || '<li>N/A</li>'}</ul>
         <h4 class="font-semibold mt-4">Recommendations:</h4>
-        <ul>${content.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
-        <p><strong>AI-Generated Insight:</strong> ${content.llm_insight}</p>
+        <ul>${(content.recommendations || []).map(r => `<li>${r}</li>`).join('') || '<li>N/A</li>'}</ul>
+        <p><strong>AI-Generated Insight:</strong> ${content.llm_insight || 'N/A'}</p>
         <h4 class="font-semibold mt-4">Potential Future Audit Objectives:</h4>
-        <ul>${content.potential_audit_objectives.map(o => `<li>${o}</li>`).join('')}</ul>
+        <ul>${(content.potential_audit_objectives || []).map(o => `<li>${o}</li>`).join('') || '<li>N/A</li>'}</ul>
     `;
     analysisResult.classList.remove('hidden');
+    exportBtn.classList.remove('hidden');
     exportBtn.onclick = () => window.location.href = `/export/${report.id}`;
 }
