@@ -10,6 +10,14 @@
     <div class="container mx-auto px-4 py-8">
         <h1 class="text-3xl font-bold mb-8">Audit Report Analyzer</h1>
         
+        <!-- Loading indicator -->
+        <div id="globalLoadingIndicator" class="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
+            <div class="bg-white p-5 rounded-lg flex items-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mr-3"></div>
+                <p>Loading... Please wait.</p>
+            </div>
+        </div>
+
         <div class="mb-8">
             <h2 class="text-xl font-semibold mb-4">Upload PDF Report</h2>
             <form id="uploadForm" class="flex flex-col items-start">
@@ -18,10 +26,6 @@
                     <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Upload and Analyze</button>
                 </div>
             </form>
-            <div id="loadingIndicator" style="display: none;" class="mt-4 flex items-center">
-                <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mr-3"></div>
-                <p>Uploading and analyzing... Please wait.</p>
-            </div>
         </div>
 
         <div id="analysisResult" class="hidden bg-white p-6 rounded shadow-md">
@@ -43,11 +47,16 @@
         const resultContent = document.getElementById('resultContent');
         const exportBtn = document.getElementById('exportBtn');
         const reportsList = document.getElementById('reportsList');
+        const loadingIndicator = document.getElementById('globalLoadingIndicator');
 
-        console.log('Full HTML content:', document.documentElement.outerHTML);
+        console.log('Loading indicator element:', loadingIndicator);
+
+        // Hide loading indicator initially
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+        }
 
         function showLoadingIndicator() {
-            const loadingIndicator = document.getElementById('loadingIndicator');
             if (loadingIndicator) {
                 loadingIndicator.style.display = 'flex';
                 console.log('Loading indicator shown');
@@ -57,7 +66,6 @@
         }
 
         function hideLoadingIndicator() {
-            const loadingIndicator = document.getElementById('loadingIndicator');
             if (loadingIndicator) {
                 loadingIndicator.style.display = 'none';
                 console.log('Loading indicator hidden');
