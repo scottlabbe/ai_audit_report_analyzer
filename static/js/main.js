@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultContent = document.getElementById('resultContent');
     const exportBtn = document.getElementById('exportBtn');
     const reportsList = document.getElementById('reportsList');
-    const loadingIndicator = document.getElementById('loadingIndicator');
 
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -12,8 +11,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const fileInput = document.getElementById('pdfFile');
         formData.append('file', fileInput.files[0]);
 
-        // Show loading indicator
-        loadingIndicator.classList.remove('hidden');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        if (loadingIndicator) {
+            loadingIndicator.classList.remove('hidden');
+        }
 
         fetch('/upload', {
             method: 'POST',
@@ -21,8 +22,9 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
-            // Hide loading indicator
-            loadingIndicator.classList.add('hidden');
+            if (loadingIndicator) {
+                loadingIndicator.classList.add('hidden');
+            }
 
             if (data.id) {
                 fetchReport(data.id);
@@ -32,8 +34,9 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error:', error);
-            // Hide loading indicator in case of error
-            loadingIndicator.classList.add('hidden');
+            if (loadingIndicator) {
+                loadingIndicator.classList.add('hidden');
+            }
             alert('An error occurred during upload and analysis.');
         });
     });
@@ -98,49 +101,3 @@ document.addEventListener('DOMContentLoaded', function() {
 
     fetchReports();
 });
-
-function fetchReport(id) {
-    fetch(`/report/${id}`)
-    .then(response => response.json())
-    .then(report => {
-        if (report.error) {
-            throw new Error(report.error);
-        }
-        displayReport(report);
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error: ' + error.message);
-    });
-}
-
-function displayReport(report) {
-    const analysisResult = document.getElementById('analysisResult');
-    const resultContent = document.getElementById('resultContent');
-    const exportBtn = document.getElementById('exportBtn');
-    const content = report.content;
-    
-    if (!content || typeof content !== 'object') {
-        resultContent.innerHTML = '<p class="text-red-500">Error: Invalid report data</p>';
-        analysisResult.classList.remove('hidden');
-        exportBtn.classList.add('hidden');
-        return;
-    }
-    
-    resultContent.innerHTML = `
-        <h3 class="font-bold">${content.report_title || 'N/A'}</h3>
-        <p><strong>Audit Organization:</strong> ${content.audit_organization || 'N/A'}</p>
-        <p><strong>Audit Objectives:</strong> ${(content.audit_objectives || []).join(', ') || 'N/A'}</p>
-        <p><strong>Overall Conclusion:</strong> ${content.overall_conclusion || 'N/A'}</p>
-        <h4 class="font-semibold mt-4">Key Findings:</h4>
-        <ul>${(content.key_findings || []).map(f => `<li>${f}</li>`).join('') || '<li>N/A</li>'}</ul>
-        <h4 class="font-semibold mt-4">Recommendations:</h4>
-        <ul>${(content.recommendations || []).map(r => `<li>${r}</li>`).join('') || '<li>N/A</li>'}</ul>
-        <p><strong>AI-Generated Insight:</strong> ${content.llm_insight || 'N/A'}</p>
-        <h4 class="font-semibold mt-4">Potential Future Audit Objectives:</h4>
-        <ul>${(content.potential_audit_objectives || []).map(o => `<li>${o}</li>`).join('') || '<li>N/A</li>'}</ul>
-    `;
-    analysisResult.classList.remove('hidden');
-    exportBtn.classList.remove('hidden');
-    exportBtn.onclick = () => window.location.href = `/export/${report.id}`;
-}
