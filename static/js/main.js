@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultContent = document.getElementById('resultContent');
     const exportBtn = document.getElementById('exportBtn');
     const reportsList = document.getElementById('reportsList');
-    const loadingIndicator = document.getElementById('loadingIndicator');
+    const loadingIndicator = document.getElementById('globalLoadingIndicator');
 
     console.log('Full HTML content:', document.documentElement.outerHTML);
     console.log('Loading indicator element:', loadingIndicator);
