@@ -1,4 +1,5 @@
 import os
+import json
 from openai import OpenAI
 
 client = OpenAI()
@@ -22,11 +23,36 @@ def analyze_report(content):
     report_title, audit_organization, audit_objectives, overall_conclusion, key_findings, recommendations, llm_insight, potential_audit_objectives
     """
 
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=1000
-    )
-    
-    result = response.choices[0].message.content
-    return eval(result)  # Convert the JSON string to a Python dictionary
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1000
+        )
+        
+        result = response.choices[0].message.content
+        
+        # Parse the JSON response
+        parsed_result = json.loads(result)
+        
+        # Validate the parsed result
+        required_keys = [
+            "report_title", "audit_organization", "audit_objectives",
+            "overall_conclusion", "key_findings", "recommendations",
+            "llm_insight", "potential_audit_objectives"
+        ]
+        for key in required_keys:
+            if key not in parsed_result:
+                raise ValueError(f"Missing required key in API response: {key}")
+        
+        return parsed_result
+
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON response: {e}")
+        return None
+    except ValueError as e:
+        print(f"Error in API response format: {e}")
+        return None
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return None
