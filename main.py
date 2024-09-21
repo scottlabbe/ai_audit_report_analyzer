@@ -82,5 +82,15 @@ def export_report(report_id):
         )
     return jsonify({'error': 'Report not found'}), 404
 
+@app.route('/delete/<int:report_id>', methods=['DELETE'])
+def delete_report(report_id):
+    db = get_db()
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if report:
+        db.delete(report)
+        db.commit()
+        return jsonify({'message': 'Report deleted successfully'}), 200
+    return jsonify({'error': 'Report not found'}), 404
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
