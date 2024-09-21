@@ -1,8 +1,10 @@
 import os
 import json
+import logging
 from openai import OpenAI
 
 client = OpenAI()
+logging.basicConfig(level=logging.INFO)
 
 def analyze_report(content):
     prompt = f"""
@@ -25,12 +27,13 @@ def analyze_report(content):
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1000
         )
         
         result = response.choices[0].message.content
+        logging.info(f"API Response: {result}")
         
         # Parse the JSON response
         parsed_result = json.loads(result)
@@ -48,11 +51,12 @@ def analyze_report(content):
         return parsed_result
 
     except json.JSONDecodeError as e:
-        print(f"Error parsing JSON response: {e}")
+        logging.error(f"Error parsing JSON response: {e}")
+        logging.error(f"Raw response: {result}")
         return None
     except ValueError as e:
-        print(f"Error in API response format: {e}")
+        logging.error(f"Error in API response format: {e}")
         return None
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        logging.error(f"An unexpected error occurred: {e}")
         return None
