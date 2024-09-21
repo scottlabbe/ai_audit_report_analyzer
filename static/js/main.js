@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultContent = document.getElementById('resultContent');
     const exportBtn = document.getElementById('exportBtn');
     const reportsList = document.getElementById('reportsList');
+    const loadingIndicator = document.getElementById('loadingIndicator');
 
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -11,10 +12,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const fileInput = document.getElementById('pdfFile');
         formData.append('file', fileInput.files[0]);
 
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        if (loadingIndicator) {
-            loadingIndicator.classList.remove('hidden');
-        }
+        console.log('Form submitted, preparing to show loading indicator');
+        
+        // Add a small delay before showing the loading indicator
+        setTimeout(() => {
+            if (loadingIndicator) {
+                loadingIndicator.classList.remove('hidden');
+                console.log('Loading indicator shown');
+            } else {
+                console.error('Loading indicator element not found');
+            }
+        }, 100);
 
         fetch('/upload', {
             method: 'POST',
@@ -22,6 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
+            console.log('Fetch request completed, hiding loading indicator');
             if (loadingIndicator) {
                 loadingIndicator.classList.add('hidden');
             }
@@ -34,6 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error:', error);
+            console.log('Error occurred, hiding loading indicator');
             if (loadingIndicator) {
                 loadingIndicator.classList.add('hidden');
             }
