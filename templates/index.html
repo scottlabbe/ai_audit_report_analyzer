@@ -5,13 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audit Report Analyzer</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
         <h1 class="text-3xl font-bold mb-8">Audit Report Analyzer</h1>
         
         <!-- Loading indicator -->
-        <div id="globalLoadingIndicator" class="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
+        <div id="globalLoadingIndicator" class="hidden fixed top-0 left-0 w-full h-full flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
             <div class="bg-white p-5 rounded-lg flex items-center">
                 <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mr-3"></div>
                 <p>Loading... Please wait.</p>
@@ -31,7 +36,7 @@
         <div id="analysisResult" class="hidden bg-white p-6 rounded shadow-md">
             <h2 class="text-xl font-semibold mb-4">Analysis Result</h2>
             <div id="resultContent"></div>
-            <button id="exportBtn" class="mt-4 bg-green-500 text-white px-4 py-2 rounded">Export as Markdown</button>
+            <button id="exportBtn" class="hidden mt-4 bg-green-500 text-white px-4 py-2 rounded">Export as Markdown</button>
         </div>
 
         <div class="mt-8">
@@ -51,14 +56,10 @@
 
         console.log('Loading indicator element:', loadingIndicator);
 
-        // Hide loading indicator initially
-        if (loadingIndicator) {
-            loadingIndicator.style.display = 'none';
-        }
-
         function showLoadingIndicator() {
+            const loadingIndicator = document.getElementById('globalLoadingIndicator');
             if (loadingIndicator) {
-                loadingIndicator.style.display = 'flex';
+                loadingIndicator.classList.remove('hidden');
                 console.log('Loading indicator shown');
             } else {
                 console.error('Loading indicator element not found');
@@ -66,19 +67,24 @@
         }
 
         function hideLoadingIndicator() {
+            const loadingIndicator = document.getElementById('globalLoadingIndicator');
             if (loadingIndicator) {
-                loadingIndicator.style.display = 'none';
+                loadingIndicator.classList.add('hidden');
                 console.log('Loading indicator hidden');
             }
         }
 
         uploadForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            const fileInput = document.getElementById('pdfFile');
+            if (!fileInput.files.length) {
+                alert('Please select a file before submitting.');
+                return;
+            }
             console.log('Form submitted, preparing to show loading indicator');
             showLoadingIndicator();
 
             const formData = new FormData();
-            const fileInput = document.getElementById('pdfFile');
             formData.append('file', fileInput.files[0]);
 
             fetch('/upload', {
