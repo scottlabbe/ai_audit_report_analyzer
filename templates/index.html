@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Report Analyzer</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8">Audit Report Analyzer</h1>
+        
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold mb-4">Upload PDF Report</h2>
+            <form id="uploadForm" class="flex items-center">
+                <input type="file" id="pdfFile" accept=".pdf" class="border p-2 mr-4">
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Upload and Analyze</button>
+            </form>
+        </div>
+
+        <div id="analysisResult" class="hidden bg-white p-6 rounded shadow-md">
+            <h2 class="text-xl font-semibold mb-4">Analysis Result</h2>
+            <div id="resultContent"></div>
+            <button id="exportBtn" class="mt-4 bg-green-500 text-white px-4 py-2 rounded">Export as Markdown</button>
+        </div>
+
+        <div class="mt-8">
+            <h2 class="text-xl font-semibold mb-4">Previous Reports</h2>
+            <ul id="reportsList" class="space-y-2"></ul>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
