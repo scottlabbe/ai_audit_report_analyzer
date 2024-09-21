@@ -7,21 +7,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        const formData = new FormData();
-        const fileInput = document.getElementById('pdfFile');
-        formData.append('file', fileInput.files[0]);
-
         console.log('Form submitted, preparing to show loading indicator');
-        
-        const loadingIndicator = document.getElementById('loadingIndicator');
+
+        const loadingIndicator = document.querySelector('#loadingIndicator');
         console.log('Loading indicator element:', loadingIndicator);
-        
+
         if (loadingIndicator) {
-            loadingIndicator.classList.remove('hidden');
+            loadingIndicator.style.display = 'flex';
             console.log('Loading indicator shown');
         } else {
             console.error('Loading indicator element not found');
         }
+
+        const formData = new FormData();
+        const fileInput = document.getElementById('pdfFile');
+        formData.append('file', fileInput.files[0]);
 
         fetch('/upload', {
             method: 'POST',
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             console.log('Fetch request completed, hiding loading indicator');
             if (loadingIndicator) {
-                loadingIndicator.classList.add('hidden');
+                loadingIndicator.style.display = 'none';
             }
 
             if (data.id) {
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error:', error);
             console.log('Error occurred, hiding loading indicator');
             if (loadingIndicator) {
-                loadingIndicator.classList.add('hidden');
+                loadingIndicator.style.display = 'none';
             }
             alert('An error occurred during upload and analysis.');
         });
