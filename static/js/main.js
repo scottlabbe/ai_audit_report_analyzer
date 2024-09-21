@@ -4,13 +4,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultContent = document.getElementById('resultContent');
     const exportBtn = document.getElementById('exportBtn');
     const reportsList = document.getElementById('reportsList');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+
+    console.log('Initial loading indicator state:', loadingIndicator);
+
+    if (!loadingIndicator) {
+        console.error('Loading indicator not found in the DOM');
+    }
 
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
         console.log('Form submitted, preparing to show loading indicator');
-
-        const loadingIndicator = document.querySelector('#loadingIndicator');
-        console.log('Loading indicator element:', loadingIndicator);
 
         if (loadingIndicator) {
             loadingIndicator.style.display = 'flex';
