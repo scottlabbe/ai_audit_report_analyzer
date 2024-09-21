@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultContent = document.getElementById('resultContent');
     const exportBtn = document.getElementById('exportBtn');
     const reportsList = document.getElementById('reportsList');
+    const loadingIndicator = document.getElementById('loadingIndicator');
 
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -11,19 +12,30 @@ document.addEventListener('DOMContentLoaded', function() {
         const fileInput = document.getElementById('pdfFile');
         formData.append('file', fileInput.files[0]);
 
+        // Show loading indicator
+        loadingIndicator.classList.remove('hidden');
+
         fetch('/upload', {
             method: 'POST',
             body: formData
         })
         .then(response => response.json())
         .then(data => {
+            // Hide loading indicator
+            loadingIndicator.classList.add('hidden');
+
             if (data.id) {
                 fetchReport(data.id);
             } else {
                 alert('Error: ' + data.error);
             }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+            console.error('Error:', error);
+            // Hide loading indicator in case of error
+            loadingIndicator.classList.add('hidden');
+            alert('An error occurred during upload and analysis.');
+        });
     });
 
     function fetchReport(id) {
@@ -42,9 +54,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function displayReport(report) {
-        const analysisResult = document.getElementById('analysisResult');
-        const resultContent = document.getElementById('resultContent');
-        const exportBtn = document.getElementById('exportBtn');
         const content = report.content;
         
         if (!content || typeof content !== 'object') {
