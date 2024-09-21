@@ -18,7 +18,7 @@
                     <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Upload and Analyze</button>
                 </div>
             </form>
-            <div id="loadingIndicator" class="hidden mt-4 flex items-center">
+            <div id="loadingIndicator" style="display: none;" class="mt-4 flex items-center">
                 <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mr-3"></div>
                 <p>Uploading and analyzing... Please wait.</p>
             </div>
@@ -43,25 +43,31 @@
         const resultContent = document.getElementById('resultContent');
         const exportBtn = document.getElementById('exportBtn');
         const reportsList = document.getElementById('reportsList');
-        const loadingIndicator = document.getElementById('loadingIndicator');
 
         console.log('Full HTML content:', document.documentElement.outerHTML);
-        console.log('Loading indicator element:', loadingIndicator);
 
-        if (!loadingIndicator) {
-            console.error('Loading indicator not found in the DOM');
-        }
-
-        uploadForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            console.log('Form submitted, preparing to show loading indicator');
-
+        function showLoadingIndicator() {
+            const loadingIndicator = document.getElementById('loadingIndicator');
             if (loadingIndicator) {
                 loadingIndicator.style.display = 'flex';
                 console.log('Loading indicator shown');
             } else {
                 console.error('Loading indicator element not found');
             }
+        }
+
+        function hideLoadingIndicator() {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+                console.log('Loading indicator hidden');
+            }
+        }
+
+        uploadForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('Form submitted, preparing to show loading indicator');
+            showLoadingIndicator();
 
             const formData = new FormData();
             const fileInput = document.getElementById('pdfFile');
@@ -74,9 +80,7 @@
             .then(response => response.json())
             .then(data => {
                 console.log('Fetch request completed, hiding loading indicator');
-                if (loadingIndicator) {
-                    loadingIndicator.style.display = 'none';
-                }
+                hideLoadingIndicator();
 
                 if (data.id) {
                     fetchReport(data.id);
@@ -87,9 +91,7 @@
             .catch(error => {
                 console.error('Error:', error);
                 console.log('Error occurred, hiding loading indicator');
-                if (loadingIndicator) {
-                    loadingIndicator.style.display = 'none';
-                }
+                hideLoadingIndicator();
                 alert('An error occurred during upload and analysis.');
             });
         });
@@ -114,8 +116,8 @@
             
             if (!content || typeof content !== 'object') {
                 resultContent.innerHTML = '<p class="text-red-500">Error: Invalid report data</p>';
-                analysisResult.classList.remove('hidden');
-                exportBtn.classList.add('hidden');
+                analysisResult.style.display = 'block';
+                exportBtn.style.display = 'none';
                 return;
             }
             
@@ -132,8 +134,8 @@
                 <h4 class="font-semibold mt-4">Potential Future Audit Objectives:</h4>
                 <ul>${(content.potential_audit_objectives || []).map(o => `<li>${o}</li>`).join('') || '<li>N/A</li>'}</ul>
             `;
-            analysisResult.classList.remove('hidden');
-            exportBtn.classList.remove('hidden');
+            analysisResult.style.display = 'block';
+            exportBtn.style.display = 'inline-block';
             exportBtn.onclick = () => window.location.href = `/export/${report.id}`;
         }
 
