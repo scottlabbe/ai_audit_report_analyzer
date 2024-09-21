@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultContent = document.getElementById('resultContent');
     const exportBtn = document.getElementById('exportBtn');
     const reportsList = document.getElementById('reportsList');
-    const loadingIndicator = document.getElementById('loadingIndicator');
 
     uploadForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -14,15 +13,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         console.log('Form submitted, preparing to show loading indicator');
         
-        // Add a small delay before showing the loading indicator
-        setTimeout(() => {
-            if (loadingIndicator) {
-                loadingIndicator.classList.remove('hidden');
-                console.log('Loading indicator shown');
-            } else {
-                console.error('Loading indicator element not found');
-            }
-        }, 100);
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        console.log('Loading indicator element:', loadingIndicator);
+        
+        if (loadingIndicator) {
+            loadingIndicator.classList.remove('hidden');
+            console.log('Loading indicator shown');
+        } else {
+            console.error('Loading indicator element not found');
+        }
 
         fetch('/upload', {
             method: 'POST',
