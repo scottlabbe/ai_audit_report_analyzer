@@ -2,12 +2,63 @@ import os
 import json
 import logging
 import time
+import re
 from openai import OpenAI, RateLimitError, APIError, APITimeoutError
 from anthropic import Anthropic, HUMAN_PROMPT, AI_PROMPT, RateLimitError as AnthropicRateLimitError, APIError as AnthropicAPIError
 
 client = OpenAI()
 anthropic = Anthropic(api_key=os.environ.get("CLAUDE_API_KEY"))
 logging.basicConfig(level=logging.INFO)
+
+def extract_info_from_text(text):
+    extracted_info = {
+        "report_title": "N/A",
+        "audit_organization": "N/A",
+        "audit_objectives": [],
+        "overall_conclusion": "N/A",
+        "key_findings": [],
+        "recommendations": [],
+        "llm_insight": "N/A",
+        "potential_audit_objectives": []
+    }
+    
+    title_match = re.search(r"Report title:?\s*(.+)", text, re.IGNORECASE)
+    if title_match:
+        extracted_info["report_title"] = title_match.group(1).strip()
+    
+    org_match = re.search(r"Audit organization:?\s*(.+)", text, re.IGNORECASE)
+    if org_match:
+        extracted_info["audit_organization"] = org_match.group(1).strip()
+    
+    objectives_match = re.search(r"Audit objectives:?\s*(.+?)(?:\n\d\.|\n\n)", text, re.IGNORECASE | re.DOTALL)
+    if objectives_match:
+        objectives = objectives_match.group(1).strip().split('\n')
+        extracted_info["audit_objectives"] = [obj.strip('- ') for obj in objectives if obj.strip()]
+    
+    conclusion_match = re.search(r"Overall conclusion:?\s*(.+?)(?:\n\d\.|\n\n)", text, re.IGNORECASE | re.DOTALL)
+    if conclusion_match:
+        extracted_info["overall_conclusion"] = conclusion_match.group(1).strip()
+    
+    findings_match = re.search(r"Key findings:?\s*(.+?)(?:\n\d\.|\n\n)", text, re.IGNORECASE | re.DOTALL)
+    if findings_match:
+        findings = findings_match.group(1).strip().split('\n')
+        extracted_info["key_findings"] = [finding.strip('- ') for finding in findings if finding.strip()]
+    
+    recommendations_match = re.search(r"Recommendations:?\s*(.+?)(?:\n\d\.|\n\n)", text, re.IGNORECASE | re.DOTALL)
+    if recommendations_match:
+        recommendations = recommendations_match.group(1).strip().split('\n')
+        extracted_info["recommendations"] = [rec.strip('- ') for rec in recommendations if rec.strip()]
+    
+    insight_match = re.search(r"Insights based on the report content:?\s*(.+?)(?:\n\d\.|\n\n)", text, re.IGNORECASE | re.DOTALL)
+    if insight_match:
+        extracted_info["llm_insight"] = insight_match.group(1).strip()
+    
+    potential_objectives_match = re.search(r"Potential audit objectives for future audits:?\s*(.+?)(?:\n\d\.|\n\n|$)", text, re.IGNORECASE | re.DOTALL)
+    if potential_objectives_match:
+        potential_objectives = potential_objectives_match.group(1).strip().split('\n')
+        extracted_info["potential_audit_objectives"] = [obj.strip('- ') for obj in potential_objectives if obj.strip()]
+    
+    return extracted_info
 
 def analyze_report_with_claude(content):
     prompt = f"""
@@ -42,15 +93,14 @@ def analyze_report_with_claude(content):
             )
 
             result = response.completion.strip()
-            if not result.startswith('{') or not result.endswith('}'): 
-                raise ValueError('Invalid JSON response from Claude')
+            
+            try:
+                parsed_result = json.loads(result)
+            except json.JSONDecodeError:
+                parsed_result = extract_info_from_text(result)
 
-            logging.info(f"Claude API Response: {result}")
+            logging.info(f"Claude API Response (parsed): {parsed_result}")
 
-            # Parse the JSON response
-            parsed_result = json.loads(result)
-
-            # Validate the parsed result
             required_keys = [
                 "report_title", "audit_organization", "audit_objectives",
                 "overall_conclusion", "key_findings", "recommendations",
@@ -58,20 +108,17 @@ def analyze_report_with_claude(content):
             ]
             for key in required_keys:
                 if key not in parsed_result:
-                    raise ValueError(
-                        f"Missing required key in Claude API response: {key}")
+                    raise ValueError(f"Missing required key in Claude API response: {key}")
 
             return {"success": True, "data": parsed_result}
 
         except AnthropicRateLimitError as e:
             if attempt < max_retries - 1:
                 delay = base_delay * (2**attempt)
-                logging.warning(
-                    f"Claude rate limit reached. Retrying in {delay} seconds...")
+                logging.warning(f"Claude rate limit reached. Retrying in {delay} seconds...")
                 time.sleep(delay)
             else:
-                logging.error(
-                    f"Claude rate limit error after {max_retries} attempts: {e}")
+                logging.error(f"Claude rate limit error after {max_retries} attempts: {e}")
                 return {
                     "success": False,
                     "error": "We're experiencing temporary issues. Please try again in a few minutes."
@@ -80,35 +127,14 @@ def analyze_report_with_claude(content):
         except AnthropicAPIError as e:
             if attempt < max_retries - 1:
                 delay = base_delay * (2**attempt)
-                logging.warning(
-                    f"Claude API error. Retrying in {delay} seconds...")
+                logging.warning(f"Claude API error. Retrying in {delay} seconds...")
                 time.sleep(delay)
             else:
-                logging.error(
-                    f"Claude API error after {max_retries} attempts: {e}")
+                logging.error(f"Claude API error after {max_retries} attempts: {e}")
                 return {
                     "success": False,
                     "error": "We're experiencing temporary issues. Please try again in a few minutes."
                 }
-
-        except json.JSONDecodeError as e:
-            logging.error(f"Error parsing JSON response from Claude: {e}")
-            logging.error(f"Raw response: {result}")
-            if 'Here are the key details' in result:
-                # Attempt to extract JSON from the response
-                json_start = result.find('{')
-                json_end = result.rfind('}')
-                if json_start != -1 and json_end != -1:
-                    result = result[json_start:json_end+1]
-                    try:
-                        parsed_result = json.loads(result)
-                        return {'success': True, 'data': parsed_result}
-                    except json.JSONDecodeError:
-                        pass
-            return {
-                "success": False,
-                "error": "Error processing the report. Please try again or contact support."
-            }
 
         except ValueError as e:
             logging.error(f"Error in Claude API response format: {e}")
@@ -121,7 +147,7 @@ def analyze_report_with_claude(content):
             logging.error(f"An unexpected error occurred with Claude: {e}")
             return {
                 "success": False,
-                "error": "An unexpected error occurred. Please try again or contact support."
+                "error": "An unexpected error occurred while processing the report. Please try again or contact support."
             }
 
     return {
@@ -162,10 +188,11 @@ def analyze_report_with_gpt4(content):
             result = response.choices[0].message.content
             logging.info(f"OpenAI API Response: {result}")
 
-            # Parse the JSON response
-            parsed_result = json.loads(result)
+            try:
+                parsed_result = json.loads(result)
+            except json.JSONDecodeError:
+                parsed_result = extract_info_from_text(result)
 
-            # Validate the parsed result
             required_keys = [
                 "report_title", "audit_organization", "audit_objectives",
                 "overall_conclusion", "key_findings", "recommendations",
@@ -173,27 +200,23 @@ def analyze_report_with_gpt4(content):
             ]
             for key in required_keys:
                 if key not in parsed_result:
-                    raise ValueError(
-                        f"Missing required key in API response: {key}")
+                    raise ValueError(f"Missing required key in API response: {key}")
 
             return {"success": True, "data": parsed_result}
 
         except RateLimitError as e:
             if "insufficient_quota" in str(e):
-                logging.error(
-                    "OpenAI API quota exceeded. Unable to process the report.")
+                logging.error("OpenAI API quota exceeded. Unable to process the report.")
                 return {
                     "success": False,
                     "error": "We're currently experiencing high demand. Please try again later or contact support."
                 }
             elif attempt < max_retries - 1:
                 delay = base_delay * (2**attempt)
-                logging.warning(
-                    f"Rate limit reached. Retrying in {delay} seconds...")
+                logging.warning(f"Rate limit reached. Retrying in {delay} seconds...")
                 time.sleep(delay)
             else:
-                logging.error(
-                    f"Rate limit error after {max_retries} attempts: {e}")
+                logging.error(f"Rate limit error after {max_retries} attempts: {e}")
                 return {
                     "success": False,
                     "error": "We're experiencing temporary issues. Please try again in a few minutes."
@@ -202,24 +225,14 @@ def analyze_report_with_gpt4(content):
         except (APIError, APITimeoutError) as e:
             if attempt < max_retries - 1:
                 delay = base_delay * (2**attempt)
-                logging.warning(
-                    f"API error or timeout. Retrying in {delay} seconds...")
+                logging.warning(f"API error or timeout. Retrying in {delay} seconds...")
                 time.sleep(delay)
             else:
-                logging.error(
-                    f"API error or timeout after {max_retries} attempts: {e}")
+                logging.error(f"API error or timeout after {max_retries} attempts: {e}")
                 return {
                     "success": False,
                     "error": "We're experiencing temporary issues. Please try again in a few minutes."
                 }
-
-        except json.JSONDecodeError as e:
-            logging.error(f"Error parsing JSON response: {e}")
-            logging.error(f"Raw response: {result}")
-            return {
-                "success": False,
-                "error": "Error processing the report. Please try again or contact support."
-            }
 
         except ValueError as e:
             logging.error(f"Error in API response format: {e}")
