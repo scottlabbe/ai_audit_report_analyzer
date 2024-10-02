@@ -35,8 +35,8 @@ def upload_file():
             
             # Parse PDF and analyze content
             pdf_content = parse_pdf(file_path)
-            use_claude = request.form.get('use_claude') == 'true'
-            analysis_result = analyze_report(pdf_content, use_claude=use_claude)
+            ai_model = request.form.get('ai_model', 'gpt-4')
+            analysis_result = analyze_report(pdf_content, ai_model=ai_model)
             if not analysis_result['success']:
                 return jsonify({'error': analysis_result['error']}), 500
             analysis_result = analysis_result['data']

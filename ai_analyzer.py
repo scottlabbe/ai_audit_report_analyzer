@@ -113,10 +113,7 @@ def analyze_report_with_claude(content):
         "error": "Unable to process the report after multiple attempts. Please try again later."
     }
 
-def analyze_report(content, use_claude=False):
-    if use_claude:
-        return analyze_report_with_claude(content)
-    
+def analyze_report_with_gpt4(content):
     prompt = f"""
     Analyze the following audit report content and extract key information:
     {content[:4096]}  # Limiting to 4000 characters to avoid token limit
@@ -226,3 +223,9 @@ def analyze_report(content, use_claude=False):
         "success": False,
         "error": "Unable to process the report after multiple attempts. Please try again later."
     }
+
+def analyze_report(content, ai_model='gpt-4'):
+    if ai_model == 'claude-sonnet':
+        return analyze_report_with_claude(content)
+    else:
+        return analyze_report_with_gpt4(content)

@@ -31,8 +31,15 @@
                     <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Upload and Analyze</button>
                 </div>
                 <div class="flex items-center mb-4">
-                    <input type="checkbox" id="useClaudeCheckbox" name="use_claude" class="mr-2">
-                    <label for="useClaudeCheckbox">Use Claude for analysis</label>
+                    <p class="mr-4">Select AI Model:</p>
+                    <label class="inline-flex items-center mr-4">
+                        <input type="radio" name="ai_model" value="gpt-4" class="form-radio" checked>
+                        <span class="ml-2">GPT-4</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="ai_model" value="claude-sonnet" class="form-radio">
+                        <span class="ml-2">Claude Sonnet 3.5</span>
+                    </label>
                 </div>
             </form>
         </div>
@@ -57,12 +64,10 @@
         const exportBtn = document.getElementById('exportBtn');
         const reportsList = document.getElementById('reportsList');
         const loadingIndicator = document.getElementById('globalLoadingIndicator');
-        const useClaudeCheckbox = document.getElementById('useClaudeCheckbox');
 
         console.log('Loading indicator element:', loadingIndicator);
 
         function showLoadingIndicator() {
-            const loadingIndicator = document.getElementById('globalLoadingIndicator');
             if (loadingIndicator) {
                 loadingIndicator.classList.remove('hidden');
                 console.log('Loading indicator shown');
@@ -72,7 +77,6 @@
         }
 
         function hideLoadingIndicator() {
-            const loadingIndicator = document.getElementById('globalLoadingIndicator');
             if (loadingIndicator) {
                 loadingIndicator.classList.add('hidden');
                 console.log('Loading indicator hidden');
@@ -91,7 +95,7 @@
 
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
-            formData.append('use_claude', useClaudeCheckbox.checked);
+            formData.append('ai_model', document.querySelector('input[name="ai_model"]:checked').value);
 
             fetch('/upload', {
                 method: 'POST',
