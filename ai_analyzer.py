@@ -7,10 +7,11 @@ from openai import OpenAI, RateLimitError, APIError, APITimeoutError
 client = OpenAI()
 logging.basicConfig(level=logging.INFO)
 
+
 def analyze_report(content):
     prompt = f"""
     Analyze the following audit report content and extract key information:
-    {content[:4000]}  # Limiting to 4000 characters to avoid token limit
+    {content[:4096]}  # Limiting to 4000 characters to avoid token limit
 
     Please provide the following information:
     1. Report title
@@ -31,11 +32,14 @@ def analyze_report(content):
 
     for attempt in range(max_retries):
         try:
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=1000
-            )
+            response = client.chat.completions.create(model="gpt-4",
+                                                      messages=[{
+                                                          "role":
+                                                          "user",
+                                                          "content":
+                                                          prompt
+                                                      }],
+                                                      max_tokens=4096)
 
             result = response.choices[0].message.content
             logging.info(f"API Response: {result}")
@@ -51,42 +55,83 @@ def analyze_report(content):
             ]
             for key in required_keys:
                 if key not in parsed_result:
-                    raise ValueError(f"Missing required key in API response: {key}")
+                    raise ValueError(
+                        f"Missing required key in API response: {key}")
 
             return {"success": True, "data": parsed_result}
 
         except RateLimitError as e:
             if "insufficient_quota" in str(e):
-                logging.error("OpenAI API quota exceeded. Unable to process the report.")
-                return {"success": False, "error": "We're currently experiencing high demand. Please try again later or contact support."}
+                logging.error(
+                    "OpenAI API quota exceeded. Unable to process the report.")
+                return {
+                    "success":
+                    False,
+                    "error":
+                    "We're currently experiencing high demand. Please try again later or contact support."
+                }
             elif attempt < max_retries - 1:
-                delay = base_delay * (2 ** attempt)
-                logging.warning(f"Rate limit reached. Retrying in {delay} seconds...")
+                delay = base_delay * (2**attempt)
+                logging.warning(
+                    f"Rate limit reached. Retrying in {delay} seconds...")
                 time.sleep(delay)
             else:
-                logging.error(f"Rate limit error after {max_retries} attempts: {e}")
-                return {"success": False, "error": "We're experiencing temporary issues. Please try again in a few minutes."}
+                logging.error(
+                    f"Rate limit error after {max_retries} attempts: {e}")
+                return {
+                    "success":
+                    False,
+                    "error":
+                    "We're experiencing temporary issues. Please try again in a few minutes."
+                }
 
         except (APIError, APITimeoutError) as e:
             if attempt < max_retries - 1:
-                delay = base_delay * (2 ** attempt)
-                logging.warning(f"API error or timeout. Retrying in {delay} seconds...")
+                delay = base_delay * (2**attempt)
+                logging.warning(
+                    f"API error or timeout. Retrying in {delay} seconds...")
                 time.sleep(delay)
             else:
-                logging.error(f"API error or timeout after {max_retries} attempts: {e}")
-                return {"success": False, "error": "We're experiencing temporary issues. Please try again in a few minutes."}
+                logging.error(
+                    f"API error or timeout after {max_retries} attempts: {e}")
+                return {
+                    "success":
+                    False,
+                    "error":
+                    "We're experiencing temporary issues. Please try again in a few minutes."
+                }
 
         except json.JSONDecodeError as e:
             logging.error(f"Error parsing JSON response: {e}")
             logging.error(f"Raw response: {result}")
-            return {"success": False, "error": "Error processing the report. Please try again or contact support."}
+            return {
+                "success":
+                False,
+                "error":
+                "Error processing the report. Please try again or contact support."
+            }
 
         except ValueError as e:
             logging.error(f"Error in API response format: {e}")
-            return {"success": False, "error": "Error processing the report. Please try again or contact support."}
+            return {
+                "success":
+                False,
+                "error":
+                "Error processing the report. Please try again or contact support."
+            }
 
         except Exception as e:
             logging.error(f"An unexpected error occurred: {e}")
-            return {"success": False, "error": "An unexpected error occurred. Please try again or contact support."}
+            return {
+                "success":
+                False,
+                "error":
+                "An unexpected error occurred. Please try again or contact support."
+            }
 
-    return {"success": False, "error": "Unable to process the report after multiple attempts. Please try again later."}
+    return {
+        "success":
+        False,
+        "error":
+        "Unable to process the report after multiple attempts. Please try again later."
+    }
