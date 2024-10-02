@@ -30,6 +30,10 @@
                     <input type="file" id="pdfFile" accept=".pdf" class="border p-2 mr-4">
                     <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Upload and Analyze</button>
                 </div>
+                <div class="flex items-center mb-4">
+                    <input type="checkbox" id="useClaudeCheckbox" name="use_claude" class="mr-2">
+                    <label for="useClaudeCheckbox">Use Claude for analysis</label>
+                </div>
             </form>
         </div>
 
@@ -53,6 +57,7 @@
         const exportBtn = document.getElementById('exportBtn');
         const reportsList = document.getElementById('reportsList');
         const loadingIndicator = document.getElementById('globalLoadingIndicator');
+        const useClaudeCheckbox = document.getElementById('useClaudeCheckbox');
 
         console.log('Loading indicator element:', loadingIndicator);
 
@@ -86,6 +91,7 @@
 
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
+            formData.append('use_claude', useClaudeCheckbox.checked);
 
             fetch('/upload', {
                 method: 'POST',
