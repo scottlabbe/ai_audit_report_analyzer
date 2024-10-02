@@ -1,3 +1,8 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+os.environ['FLASK_APP'] = 'main.py'
+
 import os
 from flask import Flask, request, jsonify, render_template, send_file
 from werkzeug.utils import secure_filename
