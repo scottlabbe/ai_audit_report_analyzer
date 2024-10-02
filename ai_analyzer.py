@@ -63,22 +63,20 @@ def extract_info_from_text(text):
 def analyze_report_with_claude(content):
     prompt = f"""
     Analyze the following audit report content and extract key information:
-    {content[:4096]}  # Limiting to 4000 characters to avoid token limit
+    {content[:4000]}  # Limiting to 4000 characters to avoid token limit
 
-    Please provide the following information:
-    1. Report title
-    2. Audit organization
-    3. Audit objectives (list)
-    4. Overall conclusion
-    5. Key findings (list)
-    6. Recommendations (list)
-    7. Insights based on the report content
-    8. Potential audit objectives for future audits (list)
+    Please provide the following information in a structured JSON format:
+    1. "report_title": The title of the audit report
+    2. "audit_organization": The organization that conducted the audit
+    3. "audit_objectives": A list of the main objectives of the audit
+    4. "overall_conclusion": The overall conclusion or summary of the audit findings
+    5. "key_findings": A list of the main findings from the audit
+    6. "recommendations": A list of recommendations based on the audit findings
+    7. "llm_insight": Your insights or analysis based on the report content
+    8. "potential_audit_objectives": A list of potential objectives for future audits based on this report
 
-    Format the response as a JSON object with the following keys:
-    report_title, audit_organization, audit_objectives, overall_conclusion, key_findings, recommendations, llm_insight, potential_audit_objectives
-
-    Ensure your response is a valid JSON object and nothing else.
+    Ensure your response is a valid JSON object with these exact keys and nothing else.
+    If you're unsure about any field, use "N/A" for string fields or an empty list for list fields.
     """
 
     max_retries = 3
@@ -87,19 +85,21 @@ def analyze_report_with_claude(content):
     for attempt in range(max_retries):
         try:
             response = anthropic.completions.create(
-                model="claude-2.0",
+                model="claude-2.0",  # We're using Claude 2.0 as Claude Sonnet 3.5 is not available
                 prompt=f"{HUMAN_PROMPT} {prompt} {AI_PROMPT}",
                 max_tokens_to_sample=4096,
             )
 
             result = response.completion.strip()
+            logging.info(f"Claude API raw response: {result}")
             
             try:
                 parsed_result = json.loads(result)
-            except json.JSONDecodeError:
+                logging.info(f"Claude API parsed response: {parsed_result}")
+            except json.JSONDecodeError as json_error:
+                logging.warning(f"JSON parsing failed: {json_error}. Falling back to text extraction.")
                 parsed_result = extract_info_from_text(result)
-
-            logging.info(f"Claude API Response (parsed): {parsed_result}")
+                logging.info(f"Extracted info from text: {parsed_result}")
 
             required_keys = [
                 "report_title", "audit_organization", "audit_objectives",
@@ -121,20 +121,15 @@ def analyze_report_with_claude(content):
                 logging.error(f"Claude rate limit error after {max_retries} attempts: {e}")
                 return {
                     "success": False,
-                    "error": "We're experiencing temporary issues. Please try again in a few minutes."
+                    "error": "We're experiencing high demand. Please try again in a few minutes."
                 }
 
         except AnthropicAPIError as e:
-            if attempt < max_retries - 1:
-                delay = base_delay * (2**attempt)
-                logging.warning(f"Claude API error. Retrying in {delay} seconds...")
-                time.sleep(delay)
-            else:
-                logging.error(f"Claude API error after {max_retries} attempts: {e}")
-                return {
-                    "success": False,
-                    "error": "We're experiencing temporary issues. Please try again in a few minutes."
-                }
+            logging.error(f"Claude API error: {e}")
+            return {
+                "success": False,
+                "error": "An error occurred while processing your request. Please try again later."
+            }
 
         except ValueError as e:
             logging.error(f"Error in Claude API response format: {e}")
@@ -147,7 +142,7 @@ def analyze_report_with_claude(content):
             logging.error(f"An unexpected error occurred with Claude: {e}")
             return {
                 "success": False,
-                "error": "An unexpected error occurred while processing the report. Please try again or contact support."
+                "error": "An unexpected error occurred. Please try again or contact support."
             }
 
     return {
