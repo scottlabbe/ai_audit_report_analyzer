@@ -26,6 +26,8 @@ def analyze_report_with_claude(content):
 
     Format the response as a JSON object with the following keys:
     report_title, audit_organization, audit_objectives, overall_conclusion, key_findings, recommendations, llm_insight, potential_audit_objectives
+
+    Ensure your response is a valid JSON object and nothing else.
     """
 
     max_retries = 3
@@ -39,7 +41,10 @@ def analyze_report_with_claude(content):
                 max_tokens_to_sample=4096,
             )
 
-            result = response.completion
+            result = response.completion.strip()
+            if not result.startswith('{') or not result.endswith('}'): 
+                raise ValueError('Invalid JSON response from Claude')
+
             logging.info(f"Claude API Response: {result}")
 
             # Parse the JSON response
@@ -89,6 +94,17 @@ def analyze_report_with_claude(content):
         except json.JSONDecodeError as e:
             logging.error(f"Error parsing JSON response from Claude: {e}")
             logging.error(f"Raw response: {result}")
+            if 'Here are the key details' in result:
+                # Attempt to extract JSON from the response
+                json_start = result.find('{')
+                json_end = result.rfind('}')
+                if json_start != -1 and json_end != -1:
+                    result = result[json_start:json_end+1]
+                    try:
+                        parsed_result = json.loads(result)
+                        return {'success': True, 'data': parsed_result}
+                    except json.JSONDecodeError:
+                        pass
             return {
                 "success": False,
                 "error": "Error processing the report. Please try again or contact support."
