@@ -69,7 +69,7 @@
 
         function showLoadingIndicator() {
             if (loadingIndicator) {
-                loadingIndicator.classList.remove('hidden');
+                loadingIndicator.style.display = 'flex';
                 console.log('Loading indicator shown');
             } else {
                 console.error('Loading indicator element not found');
@@ -78,7 +78,7 @@
 
         function hideLoadingIndicator() {
             if (loadingIndicator) {
-                loadingIndicator.classList.add('hidden');
+                loadingIndicator.style.display = 'none';
                 console.log('Loading indicator hidden');
             }
         }
