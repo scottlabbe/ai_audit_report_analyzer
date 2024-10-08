@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, JSON, Text
+from sqlalchemy import Column, Integer, String, DateTime, JSON
 from sqlalchemy.sql import func
 from database import Base
 
@@ -10,7 +10,6 @@ class Report(Base):
     upload_date = Column(DateTime(timezone=True), server_default=func.now())
     version = Column(Integer, default=1)
     content = Column(JSON, nullable=False)
-    summary = Column(Text, nullable=True)  # New column for storing report summaries
 
     def to_dict(self):
         return {
@@ -18,6 +17,5 @@ class Report(Base):
             'file_name': self.file_name,
             'upload_date': self.upload_date.isoformat(),
             'version': self.version,
-            'content': self.content,
-            'summary': self.summary
+            'content': self.content
         }
