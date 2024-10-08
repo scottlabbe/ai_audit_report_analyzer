@@ -1,3 +1,8 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+os.environ['FLASK_APP'] = 'main.py'
+
 import os
 from flask import Flask, request, jsonify, render_template, send_file
 from werkzeug.utils import secure_filename
@@ -6,15 +11,19 @@ from models import Report
 from pdf_parser import parse_pdf
 from ai_analyzer import analyze_report
 from utils import generate_markdown
+from flask_migrate import Migrate
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = init_db(app)
+migrate = Migrate(app, db)
 
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
-
-init_db()
 
 @app.route('/')
 def index():
