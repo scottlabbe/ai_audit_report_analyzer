@@ -142,7 +142,10 @@
 
         function displayReport(report) {
             console.log('Displaying report:', report);
+            console.log('Full report object:', JSON.stringify(report, null, 2));
+            
             const content = report.content;
+            console.log('Content object:', JSON.stringify(content, null, 2));
             
             if (!content || typeof content !== 'object') {
                 console.error('Invalid report data:', content);
