@@ -65,6 +65,7 @@
         const reportsList = document.getElementById('reportsList');
         const loadingIndicator = document.getElementById('globalLoadingIndicator');
 
+        console.log('DOM loaded, initializing script');
         console.log('Loading indicator element:', loadingIndicator);
 
         function showLoadingIndicator() {
@@ -95,15 +96,20 @@
 
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
-            formData.append('ai_model', document.querySelector('input[name="ai_model"]:checked').value);
+            const selectedModel = document.querySelector('input[name="ai_model"]:checked').value;
+            formData.append('ai_model', selectedModel);
+            console.log('Selected AI model:', selectedModel);
 
             fetch('/upload', {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Received response from server:', response);
+                return response.json();
+            })
             .then(data => {
-                console.log('Fetch request completed, hiding loading indicator');
+                console.log('Parsed response data:', data);
                 hideLoadingIndicator();
 
                 if (data.id) {
@@ -116,8 +122,7 @@
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                console.log('Error occurred, hiding loading indicator');
+                console.error('Error during upload and analysis:', error);
                 hideLoadingIndicator();
                 alert('An error occurred during upload and analysis.');
             });
@@ -126,9 +131,12 @@
         function fetchReport(id) {
             console.log('Fetching report with ID:', id);
             fetch(`/report/${id}`)
-            .then(response => response.json())
+            .then(response => {
+                console.log('Received response for report fetch:', response);
+                return response.json();
+            })
             .then(report => {
-                console.log('Received report data:', report);
+                console.log('Parsed report data:', report);
                 if (report.error) {
                     throw new Error(report.error);
                 }
@@ -141,11 +149,10 @@
         }
 
         function displayReport(report) {
-            console.log('Displaying report:', report);
-            console.log('Full report object:', JSON.stringify(report, null, 2));
+            console.log('Displaying report, full object:', JSON.stringify(report, null, 2));
             
             const content = report.content;
-            console.log('Content object:', JSON.stringify(content, null, 2));
+            console.log('Report content object:', JSON.stringify(content, null, 2));
             
             if (!content || typeof content !== 'object') {
                 console.error('Invalid report data:', content);
@@ -179,6 +186,7 @@
         }
 
         function fetchReports() {
+            console.log('Fetching all reports');
             fetch('/reports')
             .then(response => response.json())
             .then(reports => {
