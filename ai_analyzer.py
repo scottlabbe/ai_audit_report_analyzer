@@ -45,25 +45,21 @@ def analyze_report_with_claude(content):
             
             try:
                 parsed_result = json.loads(result)
-                logging.info(f"Claude API parsed response: {parsed_result}")
-                
-                # Ensure all required keys are present
-                required_keys = [
-                    "report_title", "audit_organization", "audit_objectives",
-                    "overall_conclusion", "key_findings", "recommendations",
-                    "llm_insight", "potential_audit_objectives"
-                ]
-                for key in required_keys:
-                    if key not in parsed_result:
-                        parsed_result[key] = "N/A" if key in ["report_title", "audit_organization", "overall_conclusion", "llm_insight"] else []
+            except json.JSONDecodeError:
+                logging.warning("JSON parsing failed. Falling back to text extraction.")
+                parsed_result = extract_info_from_text(result)
 
-                return {"success": True, "data": parsed_result}
-            except json.JSONDecodeError as json_error:
-                logging.error(f"JSON parsing failed: {json_error}. Raw response: {result}")
-                return {
-                    "success": False,
-                    "error": "Failed to parse the AI response. Please try again."
-                }
+            # Validate the parsed result
+            required_keys = [
+                "report_title", "audit_organization", "audit_objectives",
+                "overall_conclusion", "key_findings", "recommendations",
+                "llm_insight", "potential_audit_objectives"
+            ]
+            for key in required_keys:
+                if key not in parsed_result:
+                    parsed_result[key] = "N/A" if key in ["report_title", "audit_organization", "overall_conclusion", "llm_insight"] else []
+
+            return {"success": True, "data": parsed_result}
 
         except AnthropicRateLimitError as e:
             if attempt < max_retries - 1:
@@ -88,13 +84,44 @@ def analyze_report_with_claude(content):
             logging.error(f"An unexpected error occurred with Claude: {e}")
             return {
                 "success": False,
-                "error": "An unexpected error occurred. Please try again or contact support."
+                "error": f"An unexpected error occurred: {str(e)}. Please try again or contact support."
             }
 
     return {
         "success": False,
         "error": "Unable to process the report after multiple attempts. Please try again later."
     }
+
+def extract_info_from_text(text):
+    parsed_result = {
+        "report_title": "N/A",
+        "audit_organization": "N/A",
+        "audit_objectives": [],
+        "overall_conclusion": "N/A",
+        "key_findings": [],
+        "recommendations": [],
+        "llm_insight": "N/A",
+        "potential_audit_objectives": []
+    }
+
+    lines = text.split('\n')
+    current_section = None
+    for line in lines:
+        line = line.strip()
+        if line.startswith('"report_title":'):
+            parsed_result["report_title"] = line.split(':', 1)[1].strip().strip('"')
+        elif line.startswith('"audit_organization":'):
+            parsed_result["audit_organization"] = line.split(':', 1)[1].strip().strip('"')
+        elif line.startswith('"overall_conclusion":'):
+            parsed_result["overall_conclusion"] = line.split(':', 1)[1].strip().strip('"')
+        elif line.startswith('"llm_insight":'):
+            parsed_result["llm_insight"] = line.split(':', 1)[1].strip().strip('"')
+        elif line in ["audit_objectives", "key_findings", "recommendations", "potential_audit_objectives"]:
+            current_section = line
+        elif current_section and line.startswith('-'):
+            parsed_result[current_section].append(line.strip('- ').strip('"'))
+
+    return parsed_result
 
 def analyze_report_with_gpt4(content):
     prompt = f"""
