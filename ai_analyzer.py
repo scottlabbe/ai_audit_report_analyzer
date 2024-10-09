@@ -2,63 +2,12 @@ import os
 import json
 import logging
 import time
-import re
 from openai import OpenAI, RateLimitError, APIError, APITimeoutError
 from anthropic import Anthropic, HUMAN_PROMPT, AI_PROMPT, RateLimitError as AnthropicRateLimitError, APIError as AnthropicAPIError
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 anthropic = Anthropic(api_key=os.environ.get("CLAUDE_API_KEY"))
 logging.basicConfig(level=logging.INFO)
-
-def extract_info_from_text(text):
-    extracted_info = {
-        "report_title": "N/A",
-        "audit_organization": "N/A",
-        "audit_objectives": [],
-        "overall_conclusion": "N/A",
-        "key_findings": [],
-        "recommendations": [],
-        "llm_insight": "N/A",
-        "potential_audit_objectives": []
-    }
-    
-    title_match = re.search(r"Report title:?\s*(.+)", text, re.IGNORECASE)
-    if title_match:
-        extracted_info["report_title"] = title_match.group(1).strip()
-    
-    org_match = re.search(r"Audit organization:?\s*(.+)", text, re.IGNORECASE)
-    if org_match:
-        extracted_info["audit_organization"] = org_match.group(1).strip()
-    
-    objectives_match = re.search(r"Audit objectives:?\s*(.+?)(?:\n\d\.|\n\n)", text, re.IGNORECASE | re.DOTALL)
-    if objectives_match:
-        objectives = objectives_match.group(1).strip().split('\n')
-        extracted_info["audit_objectives"] = [obj.strip('- ') for obj in objectives if obj.strip()]
-    
-    conclusion_match = re.search(r"Overall conclusion:?\s*(.+?)(?:\n\d\.|\n\n)", text, re.IGNORECASE | re.DOTALL)
-    if conclusion_match:
-        extracted_info["overall_conclusion"] = conclusion_match.group(1).strip()
-    
-    findings_match = re.search(r"Key findings:?\s*(.+?)(?:\n\d\.|\n\n)", text, re.IGNORECASE | re.DOTALL)
-    if findings_match:
-        findings = findings_match.group(1).strip().split('\n')
-        extracted_info["key_findings"] = [finding.strip('- ') for finding in findings if finding.strip()]
-    
-    recommendations_match = re.search(r"Recommendations:?\s*(.+?)(?:\n\d\.|\n\n)", text, re.IGNORECASE | re.DOTALL)
-    if recommendations_match:
-        recommendations = recommendations_match.group(1).strip().split('\n')
-        extracted_info["recommendations"] = [rec.strip('- ') for rec in recommendations if rec.strip()]
-    
-    insight_match = re.search(r"Insights based on the report content:?\s*(.+?)(?:\n\d\.|\n\n)", text, re.IGNORECASE | re.DOTALL)
-    if insight_match:
-        extracted_info["llm_insight"] = insight_match.group(1).strip()
-    
-    potential_objectives_match = re.search(r"Potential audit objectives for future audits:?\s*(.+?)(?:\n\d\.|\n\n|$)", text, re.IGNORECASE | re.DOTALL)
-    if potential_objectives_match:
-        potential_objectives = potential_objectives_match.group(1).strip().split('\n')
-        extracted_info["potential_audit_objectives"] = [obj.strip('- ') for obj in potential_objectives if obj.strip()]
-    
-    return extracted_info
 
 def analyze_report_with_claude(content):
     prompt = f"""
@@ -98,8 +47,8 @@ def analyze_report_with_claude(content):
                 parsed_result = json.loads(result)
                 logging.info(f"Claude API parsed response: {parsed_result}")
             except json.JSONDecodeError as json_error:
-                logging.warning(f"JSON parsing failed: {json_error}. Falling back to text extraction.")
-                parsed_result = extract_info_from_text(result)
+                logging.error(f"JSON parsing failed: {json_error}. Falling back to text extraction.")
+                parsed_result = {}
                 logging.info(f"Extracted info from text: {parsed_result}")
 
             required_keys = [
@@ -109,7 +58,7 @@ def analyze_report_with_claude(content):
             ]
             for key in required_keys:
                 if key not in parsed_result:
-                    raise ValueError(f"Missing required key in Claude API response: {key}")
+                    parsed_result[key] = "N/A" if isinstance(parsed_result.get(key, ""), str) else []
 
             return {"success": True, "data": parsed_result}
 
@@ -130,13 +79,6 @@ def analyze_report_with_claude(content):
             return {
                 "success": False,
                 "error": "An error occurred while processing your request. Please try again later."
-            }
-
-        except ValueError as e:
-            logging.error(f"Error in Claude API response format: {e}")
-            return {
-                "success": False,
-                "error": "Error processing the report. Please try again or contact support."
             }
 
         except Exception as e:
@@ -190,7 +132,7 @@ def analyze_report_with_gpt4(content):
                 logging.info(f"Parsed result: {parsed_result}")
             except json.JSONDecodeError as json_error:
                 logging.error(f"JSON parsing failed: {json_error}. Falling back to text extraction.")
-                parsed_result = extract_info_from_text(result)
+                parsed_result = {}
                 logging.info(f"Extracted info from text: {parsed_result}")
 
             required_keys = [
@@ -200,7 +142,7 @@ def analyze_report_with_gpt4(content):
             ]
             for key in required_keys:
                 if key not in parsed_result:
-                    raise ValueError(f"Missing required key in API response: {key}")
+                    parsed_result[key] = "N/A" if isinstance(parsed_result.get(key, ""), str) else []
 
             return {"success": True, "data": parsed_result}
 
@@ -232,13 +174,6 @@ def analyze_report_with_gpt4(content):
                     "success": False,
                     "error": "We're experiencing temporary issues. Please try again in a few minutes."
                 }
-
-        except ValueError as e:
-            logging.error(f"Error in API response format: {e}")
-            return {
-                "success": False,
-                "error": "Error processing the report. Please try again or contact support."
-            }
 
         except Exception as e:
             logging.error(f"An unexpected error occurred: {e}")

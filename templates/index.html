@@ -5,11 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audit Report Analyzer</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <style>
-        .hidden {
-            display: none;
-        }
-    </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
@@ -47,12 +42,6 @@
         <div id="analysisResult" class="hidden bg-white p-6 rounded shadow-md">
             <h2 class="text-xl font-semibold mb-4">Analysis Result</h2>
             <div id="resultContent"></div>
-            <button id="exportBtn" class="hidden mt-4 bg-green-500 text-white px-4 py-2 rounded">Export as Markdown</button>
-        </div>
-
-        <div class="mt-8">
-            <h2 class="text-xl font-semibold mb-4">Previous Reports</h2>
-            <ul id="reportsList" class="space-y-2"></ul>
         </div>
     </div>
 
@@ -61,26 +50,14 @@
         const uploadForm = document.getElementById('uploadForm');
         const analysisResult = document.getElementById('analysisResult');
         const resultContent = document.getElementById('resultContent');
-        const exportBtn = document.getElementById('exportBtn');
-        const reportsList = document.getElementById('reportsList');
         const loadingIndicator = document.getElementById('globalLoadingIndicator');
 
-        console.log('Loading indicator element:', loadingIndicator);
-
         function showLoadingIndicator() {
-            if (loadingIndicator) {
-                loadingIndicator.classList.remove('hidden');
-                console.log('Loading indicator shown');
-            } else {
-                console.error('Loading indicator element not found');
-            }
+            loadingIndicator.classList.remove('hidden');
         }
 
         function hideLoadingIndicator() {
-            if (loadingIndicator) {
-                loadingIndicator.classList.add('hidden');
-                console.log('Loading indicator hidden');
-            }
+            loadingIndicator.classList.add('hidden');
         }
 
         uploadForm.addEventListener('submit', function(e) {
@@ -90,7 +67,6 @@
                 alert('Please select a file before submitting.');
                 return;
             }
-            console.log('Form submitted, preparing to show loading indicator');
             showLoadingIndicator();
 
             const formData = new FormData();
@@ -103,49 +79,21 @@
             })
             .then(response => response.json())
             .then(data => {
-                console.log('Fetch request completed, hiding loading indicator');
                 hideLoadingIndicator();
-
-                if (data.id) {
-                    fetchReport(data.id);
-                    fetchReports();
+                if (data.data) {
+                    displayAnalysis(data.data);
                 } else {
                     alert('Error: ' + data.error);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                console.log('Error occurred, hiding loading indicator');
                 hideLoadingIndicator();
                 alert('An error occurred during upload and analysis.');
             });
         });
 
-        function fetchReport(id) {
-            fetch(`/report/${id}`)
-            .then(response => response.json())
-            .then(report => {
-                if (report.error) {
-                    throw new Error(report.error);
-                }
-                displayReport(report);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error: ' + error.message);
-            });
-        }
-
-        function displayReport(report) {
-            const content = report.content;
-            
-            if (!content || typeof content !== 'object') {
-                resultContent.innerHTML = '<p class="text-red-500">Error: Invalid report data</p>';
-                analysisResult.style.display = 'block';
-                exportBtn.style.display = 'none';
-                return;
-            }
-            
+        function displayAnalysis(content) {
             resultContent.innerHTML = `
                 <h3 class="font-bold">${content.report_title || 'N/A'}</h3>
                 <p><strong>Audit Organization:</strong> ${content.audit_organization || 'N/A'}</p>
@@ -159,51 +107,8 @@
                 <h4 class="font-semibold mt-4">Potential Future Audit Objectives:</h4>
                 <ul>${(content.potential_audit_objectives || []).map(o => `<li>${o}</li>`).join('') || '<li>N/A</li>'}</ul>
             `;
-            analysisResult.style.display = 'block';
-            exportBtn.style.display = 'inline-block';
-            exportBtn.onclick = () => window.location.href = `/export/${report.id}`;
+            analysisResult.classList.remove('hidden');
         }
-
-        function fetchReports() {
-            fetch('/reports')
-            .then(response => response.json())
-            .then(reports => {
-                reportsList.innerHTML = reports.map(report => `
-                    <li class="flex items-center justify-between">
-                        <a href="#" class="text-blue-500 hover:underline" onclick="fetchReport(${report.id}); return false;">
-                            ${report.file_name} (Version ${report.version})
-                        </a>
-                        <button class="bg-red-500 text-white px-2 py-1 rounded text-sm" onclick="deleteReport(${report.id})">Delete</button>
-                    </li>
-                `).join('');
-            })
-            .catch(error => console.error('Error:', error));
-        }
-
-        window.deleteReport = function(id) {
-            if (confirm('Are you sure you want to delete this report?')) {
-                showLoadingIndicator();
-                fetch(`/delete/${id}`, { method: 'DELETE' })
-                    .then(response => response.json())
-                    .then(data => {
-                        hideLoadingIndicator();
-                        if (data.message) {
-                            alert(data.message);
-                            fetchReports();
-                        } else {
-                            alert('Error: ' + data.error);
-                        }
-                    })
-                    .catch(error => {
-                        hideLoadingIndicator();
-                        console.error('Error:', error);
-                        alert('An error occurred while deleting the report.');
-                    });
-            }
-        }
-
-        window.fetchReport = fetchReport;
-        fetchReports();
     });
     </script>
 </body>
