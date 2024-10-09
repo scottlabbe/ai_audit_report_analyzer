@@ -1,8 +1,9 @@
 import os
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_file
 from werkzeug.utils import secure_filename
 from pdf_parser import parse_pdf
 from ai_analyzer import analyze_report
+import io
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
@@ -37,6 +38,50 @@ def upload_file():
             
             return jsonify({'message': 'File uploaded and analyzed successfully', 'data': analysis_result['data']}), 200
         return jsonify({'error': 'Invalid file type'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/download_markdown', methods=['POST'])
+def download_markdown():
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        markdown_content = f"""# {data['report_title']}
+
+## Audit Organization
+{data['audit_organization']}
+
+## Audit Objectives
+{', '.join(data['audit_objectives'])}
+
+## Overall Conclusion
+{data['overall_conclusion']}
+
+## Key Findings
+{chr(10).join(['- ' + finding for finding in data['key_findings']])}
+
+## Recommendations
+{chr(10).join(['- ' + recommendation for recommendation in data['recommendations']])}
+
+## AI-Generated Insight
+{data['llm_insight']}
+
+## Potential Future Audit Objectives
+{chr(10).join(['- ' + objective for objective in data['potential_audit_objectives']])}
+"""
+
+        buffer = io.BytesIO()
+        buffer.write(markdown_content.encode('utf-8'))
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=f"{data['report_title']}.md",
+            mimetype='text/markdown'
+        )
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

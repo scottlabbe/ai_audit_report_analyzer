@@ -42,6 +42,7 @@
         <div id="analysisResult" class="hidden bg-white p-6 rounded shadow-md">
             <h2 class="text-xl font-semibold mb-4">Analysis Result</h2>
             <div id="resultContent"></div>
+            <button id="downloadMarkdown" class="mt-4 bg-green-500 text-white px-4 py-2 rounded">Download as Markdown</button>
         </div>
     </div>
 
@@ -51,6 +52,9 @@
         const analysisResult = document.getElementById('analysisResult');
         const resultContent = document.getElementById('resultContent');
         const loadingIndicator = document.getElementById('globalLoadingIndicator');
+        const downloadMarkdownButton = document.getElementById('downloadMarkdown');
+
+        let currentAnalysisResult = null;
 
         function showLoadingIndicator() {
             loadingIndicator.classList.remove('hidden');
@@ -81,6 +85,7 @@
             .then(data => {
                 hideLoadingIndicator();
                 if (data.data) {
+                    currentAnalysisResult = data.data;
                     displayAnalysis(data.data);
                 } else {
                     alert('Error: ' + data.error);
@@ -109,6 +114,44 @@
             `;
             analysisResult.classList.remove('hidden');
         }
+
+        downloadMarkdownButton.addEventListener('click', function() {
+            if (!currentAnalysisResult) {
+                alert('No analysis result available. Please upload and analyze a file first.');
+                return;
+            }
+
+            showLoadingIndicator();
+
+            fetch('/download_markdown', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(currentAnalysisResult)
+            })
+            .then(response => {
+                hideLoadingIndicator();
+                if (response.ok) {
+                    return response.blob();
+                }
+                throw new Error('Network response was not ok.');
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `${currentAnalysisResult.report_title || 'analysis_result'}.md`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while downloading the markdown file.');
+            });
+        });
     });
     </script>
 </body>
