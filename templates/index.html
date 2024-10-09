@@ -124,15 +124,16 @@
             resultContent.innerHTML = `
                 <h3 class="font-bold">${safeContent.report_title}</h3>
                 <p><strong>Audit Organization:</strong> ${safeContent.audit_organization}</p>
-                <p><strong>Audit Objectives:</strong> ${safeContent.audit_objectives.join(', ')}</p>
+                <p><strong>Audit Objectives:</strong></p>
+                <ul class="list-disc pl-5 mb-4">${safeContent.audit_objectives.map(o => `<li>${o}</li>`).join('')}</ul>
                 <p><strong>Overall Conclusion:</strong> ${safeContent.overall_conclusion}</p>
                 <h4 class="font-semibold mt-4">Key Findings:</h4>
-                <ul>${safeContent.key_findings.map(f => `<li>${f}</li>`).join('')}</ul>
+                <ul class="list-disc pl-5 mb-4">${safeContent.key_findings.map(f => `<li>${f}</li>`).join('')}</ul>
                 <h4 class="font-semibold mt-4">Recommendations:</h4>
-                <ul>${safeContent.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
+                <ul class="list-disc pl-5 mb-4">${safeContent.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
                 <p><strong>AI-Generated Insight:</strong> ${safeContent.llm_insight}</p>
                 <h4 class="font-semibold mt-4">Potential Future Audit Objectives:</h4>
-                <ul>${safeContent.potential_audit_objectives.map(o => `<li>${o}</li>`).join('')}</ul>
+                <ul class="list-disc pl-5 mb-4">${safeContent.potential_audit_objectives.map(o => `<li>${o}</li>`).join('')}</ul>
             `;
             analysisResult.classList.remove('hidden');
         }
