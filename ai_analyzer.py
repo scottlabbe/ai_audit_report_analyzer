@@ -6,7 +6,7 @@ import re
 from openai import OpenAI, RateLimitError, APIError, APITimeoutError
 from anthropic import Anthropic, HUMAN_PROMPT, AI_PROMPT, RateLimitError as AnthropicRateLimitError, APIError as AnthropicAPIError
 
-client = OpenAI()
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 anthropic = Anthropic(api_key=os.environ.get("CLAUDE_API_KEY"))
 logging.basicConfig(level=logging.INFO)
 
@@ -84,8 +84,9 @@ def analyze_report_with_claude(content):
 
     for attempt in range(max_retries):
         try:
+            logging.info(f"Attempt {attempt + 1} to analyze report with Claude")
             response = anthropic.completions.create(
-                model="claude-2.0",  # We're using Claude 2.0 as Claude Sonnet 3.5 is not available
+                model="claude-2.1",  # Using Claude 2.1 as Claude Sonnet 3.5 is not available
                 prompt=f"{HUMAN_PROMPT} {prompt} {AI_PROMPT}",
                 max_tokens_to_sample=4096,
             )
@@ -153,7 +154,7 @@ def analyze_report_with_claude(content):
 def analyze_report_with_gpt4(content):
     prompt = f"""
     Analyze the following audit report content and extract key information:
-    {content[:4096]}  # Limiting to 4000 characters to avoid token limit
+    {content[:4096]}  # Limiting to 4096 characters to avoid token limit
 
     Please provide the following information:
     1. Report title
@@ -174,8 +175,9 @@ def analyze_report_with_gpt4(content):
 
     for attempt in range(max_retries):
         try:
+            logging.info(f"Attempt {attempt + 1} to analyze report with GPT-4")
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=4096
             )
@@ -184,9 +186,12 @@ def analyze_report_with_gpt4(content):
             logging.info(f"OpenAI API Response: {result}")
 
             try:
-                parsed_result = json.loads(result)
-            except json.JSONDecodeError:
+                parsed_result = json.loads(result) if result else {}
+                logging.info(f"Parsed result: {parsed_result}")
+            except json.JSONDecodeError as json_error:
+                logging.error(f"JSON parsing failed: {json_error}. Falling back to text extraction.")
                 parsed_result = extract_info_from_text(result)
+                logging.info(f"Extracted info from text: {parsed_result}")
 
             required_keys = [
                 "report_title", "audit_organization", "audit_objectives",
@@ -200,8 +205,8 @@ def analyze_report_with_gpt4(content):
             return {"success": True, "data": parsed_result}
 
         except RateLimitError as e:
+            logging.error(f"OpenAI API rate limit error: {e}")
             if "insufficient_quota" in str(e):
-                logging.error("OpenAI API quota exceeded. Unable to process the report.")
                 return {
                     "success": False,
                     "error": "We're currently experiencing high demand. Please try again later or contact support."
@@ -211,19 +216,18 @@ def analyze_report_with_gpt4(content):
                 logging.warning(f"Rate limit reached. Retrying in {delay} seconds...")
                 time.sleep(delay)
             else:
-                logging.error(f"Rate limit error after {max_retries} attempts: {e}")
                 return {
                     "success": False,
                     "error": "We're experiencing temporary issues. Please try again in a few minutes."
                 }
 
         except (APIError, APITimeoutError) as e:
+            logging.error(f"OpenAI API error or timeout: {e}")
             if attempt < max_retries - 1:
                 delay = base_delay * (2**attempt)
                 logging.warning(f"API error or timeout. Retrying in {delay} seconds...")
                 time.sleep(delay)
             else:
-                logging.error(f"API error or timeout after {max_retries} attempts: {e}")
                 return {
                     "success": False,
                     "error": "We're experiencing temporary issues. Please try again in a few minutes."
@@ -248,7 +252,7 @@ def analyze_report_with_gpt4(content):
         "error": "Unable to process the report after multiple attempts. Please try again later."
     }
 
-def analyze_report(content, ai_model='gpt-4o-mini'):
+def analyze_report(content, ai_model='gpt-4'):
     if ai_model == 'claude-sonnet':
         return analyze_report_with_claude(content)
     else:
