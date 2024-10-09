@@ -46,21 +46,24 @@ def analyze_report_with_claude(content):
             try:
                 parsed_result = json.loads(result)
                 logging.info(f"Claude API parsed response: {parsed_result}")
+                
+                # Ensure all required keys are present
+                required_keys = [
+                    "report_title", "audit_organization", "audit_objectives",
+                    "overall_conclusion", "key_findings", "recommendations",
+                    "llm_insight", "potential_audit_objectives"
+                ]
+                for key in required_keys:
+                    if key not in parsed_result:
+                        parsed_result[key] = "N/A" if key in ["report_title", "audit_organization", "overall_conclusion", "llm_insight"] else []
+
+                return {"success": True, "data": parsed_result}
             except json.JSONDecodeError as json_error:
-                logging.error(f"JSON parsing failed: {json_error}. Falling back to text extraction.")
-                parsed_result = {}
-                logging.info(f"Extracted info from text: {parsed_result}")
-
-            required_keys = [
-                "report_title", "audit_organization", "audit_objectives",
-                "overall_conclusion", "key_findings", "recommendations",
-                "llm_insight", "potential_audit_objectives"
-            ]
-            for key in required_keys:
-                if key not in parsed_result:
-                    parsed_result[key] = "N/A" if isinstance(parsed_result.get(key, ""), str) else []
-
-            return {"success": True, "data": parsed_result}
+                logging.error(f"JSON parsing failed: {json_error}. Raw response: {result}")
+                return {
+                    "success": False,
+                    "error": "Failed to parse the AI response. Please try again."
+                }
 
         except AnthropicRateLimitError as e:
             if attempt < max_retries - 1:
@@ -130,21 +133,23 @@ def analyze_report_with_gpt4(content):
             try:
                 parsed_result = json.loads(result) if result else {}
                 logging.info(f"Parsed result: {parsed_result}")
+
+                required_keys = [
+                    "report_title", "audit_organization", "audit_objectives",
+                    "overall_conclusion", "key_findings", "recommendations",
+                    "llm_insight", "potential_audit_objectives"
+                ]
+                for key in required_keys:
+                    if key not in parsed_result:
+                        parsed_result[key] = "N/A" if key in ["report_title", "audit_organization", "overall_conclusion", "llm_insight"] else []
+
+                return {"success": True, "data": parsed_result}
             except json.JSONDecodeError as json_error:
-                logging.error(f"JSON parsing failed: {json_error}. Falling back to text extraction.")
-                parsed_result = {}
-                logging.info(f"Extracted info from text: {parsed_result}")
-
-            required_keys = [
-                "report_title", "audit_organization", "audit_objectives",
-                "overall_conclusion", "key_findings", "recommendations",
-                "llm_insight", "potential_audit_objectives"
-            ]
-            for key in required_keys:
-                if key not in parsed_result:
-                    parsed_result[key] = "N/A" if isinstance(parsed_result.get(key, ""), str) else []
-
-            return {"success": True, "data": parsed_result}
+                logging.error(f"JSON parsing failed: {json_error}. Raw response: {result}")
+                return {
+                    "success": False,
+                    "error": "Failed to parse the AI response. Please try again."
+                }
 
         except RateLimitError as e:
             logging.error(f"OpenAI API rate limit error: {e}")

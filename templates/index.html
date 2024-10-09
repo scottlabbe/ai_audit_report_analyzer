@@ -4,45 +4,47 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audit Report Analyzer</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
         <h1 class="text-3xl font-bold mb-8">Audit Report Analyzer</h1>
         
-        <!-- Loading indicator -->
-        <div id="globalLoadingIndicator" class="hidden fixed top-0 left-0 w-full h-full flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
-            <div class="bg-white p-5 rounded-lg flex items-center">
-                <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mr-3"></div>
-                <p>Loading... Please wait.</p>
+        <form id="uploadForm" class="mb-8">
+            <div class="mb-4">
+                <label for="pdfFile" class="block text-sm font-medium text-gray-700">Upload PDF File:</label>
+                <input type="file" id="pdfFile" name="file" accept=".pdf" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm">
             </div>
-        </div>
-
-        <div class="mb-8">
-            <h2 class="text-xl font-semibold mb-4">Upload PDF Report</h2>
-            <form id="uploadForm" class="flex flex-col items-start">
-                <div class="flex items-center mb-4">
-                    <input type="file" id="pdfFile" accept=".pdf" class="border p-2 mr-4">
-                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Upload and Analyze</button>
-                </div>
-                <div class="flex items-center mb-4">
-                    <p class="mr-4">Select AI Model:</p>
-                    <label class="inline-flex items-center mr-4">
-                        <input type="radio" name="ai_model" value="gpt-4" class="form-radio" checked>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Choose AI Model:</label>
+                <div>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="ai_model" value="gpt-4" checked class="form-radio">
                         <span class="ml-2">GPT-4</span>
                     </label>
-                    <label class="inline-flex items-center">
+                    <label class="inline-flex items-center ml-6">
                         <input type="radio" name="ai_model" value="claude-sonnet" class="form-radio">
                         <span class="ml-2">Claude Sonnet</span>
                     </label>
                 </div>
-            </form>
-        </div>
+            </div>
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Analyze Report
+            </button>
+        </form>
 
-        <div id="analysisResult" class="hidden bg-white p-6 rounded shadow-md">
-            <h2 class="text-xl font-semibold mb-4">Analysis Result</h2>
+        <div id="analysisResult" class="hidden bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-4">Analysis Result</h2>
             <div id="resultContent"></div>
-            <button id="downloadMarkdown" class="mt-4 bg-green-500 text-white px-4 py-2 rounded">Download as Markdown</button>
+            <button id="downloadMarkdown" class="mt-4 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                Download as Markdown
+            </button>
+        </div>
+    </div>
+
+    <div id="globalLoadingIndicator" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center">
+        <div class="bg-white p-4 rounded-lg shadow-lg">
+            <p class="text-lg font-semibold">Processing...</p>
         </div>
     </div>
 
@@ -87,8 +89,10 @@
                 if (data.data) {
                     currentAnalysisResult = data.data;
                     displayAnalysis(data.data);
-                } else {
+                } else if (data.error) {
                     alert('Error: ' + data.error);
+                } else {
+                    throw new Error('Invalid response format');
                 }
             })
             .catch(error => {
@@ -99,18 +103,36 @@
         });
 
         function displayAnalysis(content) {
+            if (typeof content !== 'object' || content === null) {
+                console.error('Invalid content format:', content);
+                resultContent.innerHTML = '<p class="text-red-500">Error: Invalid analysis result format</p>';
+                analysisResult.classList.remove('hidden');
+                return;
+            }
+
+            const safeContent = {
+                report_title: content.report_title || 'N/A',
+                audit_organization: content.audit_organization || 'N/A',
+                audit_objectives: Array.isArray(content.audit_objectives) ? content.audit_objectives : ['N/A'],
+                overall_conclusion: content.overall_conclusion || 'N/A',
+                key_findings: Array.isArray(content.key_findings) ? content.key_findings : ['N/A'],
+                recommendations: Array.isArray(content.recommendations) ? content.recommendations : ['N/A'],
+                llm_insight: content.llm_insight || 'N/A',
+                potential_audit_objectives: Array.isArray(content.potential_audit_objectives) ? content.potential_audit_objectives : ['N/A']
+            };
+
             resultContent.innerHTML = `
-                <h3 class="font-bold">${content.report_title || 'N/A'}</h3>
-                <p><strong>Audit Organization:</strong> ${content.audit_organization || 'N/A'}</p>
-                <p><strong>Audit Objectives:</strong> ${(content.audit_objectives || []).join(', ') || 'N/A'}</p>
-                <p><strong>Overall Conclusion:</strong> ${content.overall_conclusion || 'N/A'}</p>
+                <h3 class="font-bold">${safeContent.report_title}</h3>
+                <p><strong>Audit Organization:</strong> ${safeContent.audit_organization}</p>
+                <p><strong>Audit Objectives:</strong> ${safeContent.audit_objectives.join(', ')}</p>
+                <p><strong>Overall Conclusion:</strong> ${safeContent.overall_conclusion}</p>
                 <h4 class="font-semibold mt-4">Key Findings:</h4>
-                <ul>${(content.key_findings || []).map(f => `<li>${f}</li>`).join('') || '<li>N/A</li>'}</ul>
+                <ul>${safeContent.key_findings.map(f => `<li>${f}</li>`).join('')}</ul>
                 <h4 class="font-semibold mt-4">Recommendations:</h4>
-                <ul>${(content.recommendations || []).map(r => `<li>${r}</li>`).join('') || '<li>N/A</li>'}</ul>
-                <p><strong>AI-Generated Insight:</strong> ${content.llm_insight || 'N/A'}</p>
+                <ul>${safeContent.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
+                <p><strong>AI-Generated Insight:</strong> ${safeContent.llm_insight}</p>
                 <h4 class="font-semibold mt-4">Potential Future Audit Objectives:</h4>
-                <ul>${(content.potential_audit_objectives || []).map(o => `<li>${o}</li>`).join('') || '<li>N/A</li>'}</ul>
+                <ul>${safeContent.potential_audit_objectives.map(o => `<li>${o}</li>`).join('')}</ul>
             `;
             analysisResult.classList.remove('hidden');
         }
