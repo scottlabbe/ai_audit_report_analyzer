@@ -15,14 +15,6 @@ author = "agent"
 task = "workflow.run"
 args = "Run Flask App"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Flask Migration"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Flask Migration Upgrade"
-
 [[workflows.workflow]]
 name = "Run Flask App"
 author = "agent"
@@ -34,28 +26,6 @@ agentRequireRestartOnSave = false
 task = "shell.exec"
 args = "python main.py"
 waitForPort = 5000
-
-[[workflows.workflow]]
-name = "Flask Migration"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "FLASK_APP=main.py flask db init && FLASK_APP=main.py flask db migrate -m 'Remove summary field from Report model' && FLASK_APP=main.py flask db upgrade"
-
-[[workflows.workflow]]
-name = "Flask Migration Upgrade"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "FLASK_APP=main.py flask db upgrade"
 
 [deployment]
 run = ["sh", "-c", "python main.py"]

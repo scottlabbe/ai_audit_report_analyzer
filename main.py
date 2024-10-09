@@ -1,5 +1,4 @@
 import os
-import logging
 from flask import Flask, request, jsonify, render_template, send_file
 from werkzeug.utils import secure_filename
 from database import init_db, get_db
@@ -9,18 +8,13 @@ from ai_analyzer import analyze_report
 from utils import generate_markdown
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit.
+app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
 
-# Ensure the upload folder exists
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-
-# Initialize the database
-db = init_db(app)
+init_db()
 
 @app.route('/')
 def index():
@@ -39,36 +33,26 @@ def upload_file():
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
             
-            logger.info(f"File saved: {file_path}")
-            
             # Parse PDF and analyze content
             pdf_content = parse_pdf(file_path)
-            ai_model = request.form.get('ai_model', 'gpt-4o-mini')
-            logger.info(f"Analyzing report with model: {ai_model}")
+            ai_model = request.form.get('ai_model', 'gpt-4')
             analysis_result = analyze_report(pdf_content, ai_model=ai_model)
-            
             if not analysis_result['success']:
-                logger.error(f"Analysis failed: {analysis_result['error']}")
                 return jsonify({'error': analysis_result['error']}), 500
-            
-            analysis_data = analysis_result['data']
-            logger.info(f"Analysis result: {analysis_data}")
+            analysis_result = analysis_result['data']
             
             # Save to database
             db = get_db()
             report = Report(
                 file_name=filename,
-                content=analysis_data
+                content=analysis_result
             )
             db.add(report)
             db.commit()
             
-            logger.info(f"Report saved to database with ID: {report.id}")
-            
             return jsonify({'message': 'File uploaded and analyzed successfully', 'id': report.id}), 200
         return jsonify({'error': 'Invalid file type'}), 400
     except Exception as e:
-        logger.exception("An error occurred during file upload and analysis")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/reports', methods=['GET'])
@@ -82,7 +66,6 @@ def get_report(report_id):
     db = get_db()
     report = db.query(Report).filter(Report.id == report_id).first()
     if report:
-        logger.info(f"Fetched report: {report.to_dict()}")
         return jsonify(report.to_dict())
     return jsonify({'error': 'Report not found'}), 404
 

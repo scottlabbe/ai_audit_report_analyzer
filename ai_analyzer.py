@@ -85,7 +85,7 @@ def analyze_report_with_claude(content):
     for attempt in range(max_retries):
         try:
             response = anthropic.completions.create(
-                model="claude-2.0",
+                model="claude-2.0",  # We're using Claude 2.0 as Claude Sonnet 3.5 is not available
                 prompt=f"{HUMAN_PROMPT} {prompt} {AI_PROMPT}",
                 max_tokens_to_sample=4096,
             )
@@ -174,7 +174,6 @@ def analyze_report_with_gpt4(content):
 
     for attempt in range(max_retries):
         try:
-            logging.info(f"Attempt {attempt + 1} to analyze report with GPT-4")
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
@@ -186,11 +185,8 @@ def analyze_report_with_gpt4(content):
 
             try:
                 parsed_result = json.loads(result)
-                logging.info(f"Parsed JSON result: {json.dumps(parsed_result, indent=2)}")
             except json.JSONDecodeError:
-                logging.warning("Failed to parse JSON response. Falling back to text extraction.")
                 parsed_result = extract_info_from_text(result)
-                logging.info(f"Extracted info from text: {json.dumps(parsed_result, indent=2)}")
 
             required_keys = [
                 "report_title", "audit_organization", "audit_objectives",
@@ -201,7 +197,6 @@ def analyze_report_with_gpt4(content):
                 if key not in parsed_result:
                     raise ValueError(f"Missing required key in API response: {key}")
 
-            logging.info("Successfully analyzed report with GPT-4")
             return {"success": True, "data": parsed_result}
 
         except RateLimitError as e:

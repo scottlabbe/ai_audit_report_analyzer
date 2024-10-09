@@ -65,12 +65,11 @@
         const reportsList = document.getElementById('reportsList');
         const loadingIndicator = document.getElementById('globalLoadingIndicator');
 
-        console.log('DOM loaded, initializing script');
         console.log('Loading indicator element:', loadingIndicator);
 
         function showLoadingIndicator() {
             if (loadingIndicator) {
-                loadingIndicator.style.display = 'flex';
+                loadingIndicator.classList.remove('hidden');
                 console.log('Loading indicator shown');
             } else {
                 console.error('Loading indicator element not found');
@@ -79,7 +78,7 @@
 
         function hideLoadingIndicator() {
             if (loadingIndicator) {
-                loadingIndicator.style.display = 'none';
+                loadingIndicator.classList.add('hidden');
                 console.log('Loading indicator hidden');
             }
         }
@@ -96,73 +95,58 @@
 
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
-            const selectedModel = document.querySelector('input[name="ai_model"]:checked').value;
-            formData.append('ai_model', selectedModel);
-            console.log('Selected AI model:', selectedModel);
+            formData.append('ai_model', document.querySelector('input[name="ai_model"]:checked').value);
 
             fetch('/upload', {
                 method: 'POST',
                 body: formData
             })
-            .then(response => {
-                console.log('Received response from server:', response);
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                console.log('Parsed response data:', data);
+                console.log('Fetch request completed, hiding loading indicator');
                 hideLoadingIndicator();
 
                 if (data.id) {
-                    console.log('Report uploaded successfully, fetching report with ID:', data.id);
                     fetchReport(data.id);
                     fetchReports();
                 } else {
-                    console.error('Error in upload response:', data.error);
                     alert('Error: ' + data.error);
                 }
             })
             .catch(error => {
-                console.error('Error during upload and analysis:', error);
+                console.error('Error:', error);
+                console.log('Error occurred, hiding loading indicator');
                 hideLoadingIndicator();
                 alert('An error occurred during upload and analysis.');
             });
         });
 
         function fetchReport(id) {
-            console.log('Fetching report with ID:', id);
             fetch(`/report/${id}`)
-            .then(response => {
-                console.log('Received response for report fetch:', response);
-                return response.json();
-            })
+            .then(response => response.json())
             .then(report => {
-                console.log('Parsed report data:', report);
                 if (report.error) {
                     throw new Error(report.error);
                 }
                 displayReport(report);
             })
             .catch(error => {
-                console.error('Error fetching report:', error);
+                console.error('Error:', error);
                 alert('Error: ' + error.message);
             });
         }
 
         function displayReport(report) {
-            console.log('Displaying report, full object:', JSON.stringify(report, null, 2));
-            
             const content = report.content;
-            console.log('Report content object:', JSON.stringify(content, null, 2));
             
             if (!content || typeof content !== 'object') {
-                console.error('Invalid report data:', content);
                 resultContent.innerHTML = '<p class="text-red-500">Error: Invalid report data</p>';
                 analysisResult.style.display = 'block';
                 exportBtn.style.display = 'none';
                 return;
             }
             
-            let htmlContent = `
+            resultContent.innerHTML = `
                 <h3 class="font-bold">${content.report_title || 'N/A'}</h3>
                 <p><strong>Audit Organization:</strong> ${content.audit_organization || 'N/A'}</p>
                 <p><strong>Audit Objectives:</strong> ${(content.audit_objectives || []).join(', ') || 'N/A'}</p>
@@ -175,22 +159,15 @@
                 <h4 class="font-semibold mt-4">Potential Future Audit Objectives:</h4>
                 <ul>${(content.potential_audit_objectives || []).map(o => `<li>${o}</li>`).join('') || '<li>N/A</li>'}</ul>
             `;
-            
-            console.log('Generated HTML content:', htmlContent);
-            resultContent.innerHTML = htmlContent;
             analysisResult.style.display = 'block';
             exportBtn.style.display = 'inline-block';
             exportBtn.onclick = () => window.location.href = `/export/${report.id}`;
-            
-            console.log('Report displayed successfully');
         }
 
         function fetchReports() {
-            console.log('Fetching all reports');
             fetch('/reports')
             .then(response => response.json())
             .then(reports => {
-                console.log('Fetched reports:', reports);
                 reportsList.innerHTML = reports.map(report => `
                     <li class="flex items-center justify-between">
                         <a href="#" class="text-blue-500 hover:underline" onclick="fetchReport(${report.id}); return false;">
@@ -200,7 +177,7 @@
                     </li>
                 `).join('');
             })
-            .catch(error => console.error('Error fetching reports:', error));
+            .catch(error => console.error('Error:', error));
         }
 
         window.deleteReport = function(id) {
