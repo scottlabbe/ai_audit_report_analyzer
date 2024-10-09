@@ -58,6 +58,8 @@ def analyze_report_with_claude(content):
             for key in required_keys:
                 if key not in parsed_result:
                     parsed_result[key] = "N/A" if key in ["report_title", "audit_organization", "overall_conclusion", "llm_insight"] else []
+                elif isinstance(parsed_result[key], str) and key not in ["report_title", "audit_organization", "overall_conclusion", "llm_insight"]:
+                    parsed_result[key] = [parsed_result[key]] if parsed_result[key] != "N/A" else []
 
             return {"success": True, "data": parsed_result}
 
@@ -116,9 +118,12 @@ def extract_info_from_text(text):
             parsed_result["overall_conclusion"] = line.split(':', 1)[1].strip().strip('"')
         elif line.startswith('"llm_insight":'):
             parsed_result["llm_insight"] = line.split(':', 1)[1].strip().strip('"')
-        elif line in ["audit_objectives", "key_findings", "recommendations", "potential_audit_objectives"]:
-            current_section = line
-        elif current_section and line.startswith('-'):
+        elif line.startswith('"audit_objectives":') or line.startswith('"key_findings":') or line.startswith('"recommendations":') or line.startswith('"potential_audit_objectives":'):
+            current_section = line.split(':')[0].strip('"')
+            content = line.split(':', 1)[1].strip().strip('[]')
+            if content:
+                parsed_result[current_section] = [item.strip().strip('"') for item in content.split(',')]
+        elif current_section and (line.startswith('"') or line.startswith('-')):
             parsed_result[current_section].append(line.strip('- ').strip('"'))
 
     return parsed_result
