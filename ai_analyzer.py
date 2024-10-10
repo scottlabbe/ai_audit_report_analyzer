@@ -35,7 +35,7 @@ def analyze_report_with_claude(content):
         try:
             logging.info(f"Attempt {attempt + 1} to analyze report with Claude")
             response = anthropic.completions.create(
-                model="claude-2.1",  # Using Claude 2.1 as Claude Sonnet 3.5 is not available
+                model="claude-2.1",
                 prompt=f"{HUMAN_PROMPT} {prompt} {AI_PROMPT}",
                 max_tokens_to_sample=4096,
             )
@@ -47,21 +47,11 @@ def analyze_report_with_claude(content):
                 parsed_result = json.loads(result)
             except json.JSONDecodeError:
                 logging.warning("JSON parsing failed. Falling back to text extraction.")
-                parsed_result = extract_info_from_text(result)
+                parsed_result = extract_structured_data(result)
 
-            # Validate the parsed result
-            required_keys = [
-                "report_title", "audit_organization", "audit_objectives",
-                "overall_conclusion", "key_findings", "recommendations",
-                "llm_insight", "potential_audit_objectives"
-            ]
-            for key in required_keys:
-                if key not in parsed_result:
-                    parsed_result[key] = "N/A" if key in ["report_title", "audit_organization", "overall_conclusion", "llm_insight"] else []
-                elif isinstance(parsed_result[key], str) and key not in ["report_title", "audit_organization", "overall_conclusion", "llm_insight"]:
-                    parsed_result[key] = [parsed_result[key]] if parsed_result[key] != "N/A" else []
+            sanitized_result = sanitize_result(parsed_result)
 
-            return {"success": True, "data": parsed_result}
+            return {"success": True, "data": sanitized_result}
 
         except AnthropicRateLimitError as e:
             if attempt < max_retries - 1:
@@ -94,57 +84,23 @@ def analyze_report_with_claude(content):
         "error": "Unable to process the report after multiple attempts. Please try again later."
     }
 
-def extract_info_from_text(text):
-    parsed_result = {
-        "report_title": "N/A",
-        "audit_organization": "N/A",
-        "audit_objectives": [],
-        "overall_conclusion": "N/A",
-        "key_findings": [],
-        "recommendations": [],
-        "llm_insight": "N/A",
-        "potential_audit_objectives": []
-    }
-
-    lines = text.split('\n')
-    current_section = None
-    for line in lines:
-        line = line.strip()
-        if line.startswith('"report_title":'):
-            parsed_result["report_title"] = line.split(':', 1)[1].strip().strip('"')
-        elif line.startswith('"audit_organization":'):
-            parsed_result["audit_organization"] = line.split(':', 1)[1].strip().strip('"')
-        elif line.startswith('"overall_conclusion":'):
-            parsed_result["overall_conclusion"] = line.split(':', 1)[1].strip().strip('"')
-        elif line.startswith('"llm_insight":'):
-            parsed_result["llm_insight"] = line.split(':', 1)[1].strip().strip('"')
-        elif line.startswith('"audit_objectives":') or line.startswith('"key_findings":') or line.startswith('"recommendations":') or line.startswith('"potential_audit_objectives":'):
-            current_section = line.split(':')[0].strip('"')
-            content = line.split(':', 1)[1].strip().strip('[]')
-            if content:
-                parsed_result[current_section] = [item.strip().strip('"') for item in content.split(',')]
-        elif current_section and (line.startswith('"') or line.startswith('-')):
-            parsed_result[current_section].append(line.strip('- ').strip('"'))
-
-    return parsed_result
-
 def analyze_report_with_gpt4(content):
     prompt = f"""
     Analyze the following audit report content and extract key information:
     {content[:4096]}  # Limiting to 4096 characters to avoid token limit
 
-    Please provide the following information:
-    1. Report title
-    2. Audit organization
-    3. Audit objectives (list)
-    4. Overall conclusion
-    5. Key findings (list)
-    6. Recommendations (list)
-    7. Insights based on the report content
-    8. Potential audit objectives for future audits (list)
+    Please provide the following information in a valid JSON format:
+    1. "report_title": The title of the audit report
+    2. "audit_organization": The organization that conducted the audit
+    3. "audit_objectives": A list of the main objectives of the audit
+    4. "overall_conclusion": The overall conclusion or summary of the audit findings
+    5. "key_findings": A list of the main findings from the audit
+    6. "recommendations": A list of recommendations based on the audit findings
+    7. "llm_insight": Your insights or analysis based on the report content
+    8. "potential_audit_objectives": A list of potential objectives for future audits based on this report
 
-    Format the response as a JSON object with the following keys:
-    report_title, audit_organization, audit_objectives, overall_conclusion, key_findings, recommendations, llm_insight, potential_audit_objectives
+    Ensure your response is a valid JSON object with these exact keys and nothing else.
+    If you're unsure about any field, use "N/A" for string fields or an empty list for list fields.
     """
 
     max_retries = 3
@@ -154,34 +110,26 @@ def analyze_report_with_gpt4(content):
         try:
             logging.info(f"Attempt {attempt + 1} to analyze report with GPT-4o-mini")
             response = client.chat.completions.create(
-                model="gpt-4o-mini",  # Updated to use GPT-4o-mini
+                model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=4096
             )
 
-            result = response.choices[0].message.content
+            result = response.choices[0].message.content.strip()
             logging.info(f"OpenAI API Response: {result}")
 
             try:
-                parsed_result = json.loads(result) if result else {}
-                logging.info(f"Parsed result: {parsed_result}")
-
-                required_keys = [
-                    "report_title", "audit_organization", "audit_objectives",
-                    "overall_conclusion", "key_findings", "recommendations",
-                    "llm_insight", "potential_audit_objectives"
-                ]
-                for key in required_keys:
-                    if key not in parsed_result:
-                        parsed_result[key] = "N/A" if key in ["report_title", "audit_organization", "overall_conclusion", "llm_insight"] else []
-
-                return {"success": True, "data": parsed_result}
-            except json.JSONDecodeError as json_error:
+                json_start = result.index('{')
+                json_end = result.rindex('}') + 1
+                json_str = result[json_start:json_end]
+                parsed_result = json.loads(json_str)
+            except (ValueError, json.JSONDecodeError) as json_error:
                 logging.error(f"JSON parsing failed: {json_error}. Raw response: {result}")
-                return {
-                    "success": False,
-                    "error": "Failed to parse the AI response. Please try again."
-                }
+                parsed_result = extract_structured_data(result)
+
+            sanitized_result = sanitize_result(parsed_result)
+
+            return {"success": True, "data": sanitized_result}
 
         except RateLimitError as e:
             logging.error(f"OpenAI API rate limit error: {e}")
@@ -223,6 +171,55 @@ def analyze_report_with_gpt4(content):
         "success": False,
         "error": "Unable to process the report after multiple attempts. Please try again later."
     }
+
+def extract_structured_data(text):
+    data = {
+        "report_title": "N/A",
+        "audit_organization": "N/A",
+        "audit_objectives": [],
+        "overall_conclusion": "N/A",
+        "key_findings": [],
+        "recommendations": [],
+        "llm_insight": "N/A",
+        "potential_audit_objectives": []
+    }
+
+    lines = text.split('\n')
+    current_key = None
+
+    for line in lines:
+        line = line.strip()
+        if line.startswith(('report_title:', 'audit_organization:', 'overall_conclusion:', 'llm_insight:')):
+            key, value = line.split(':', 1)
+            data[key.strip()] = value.strip()
+        elif line.startswith(('audit_objectives:', 'key_findings:', 'recommendations:', 'potential_audit_objectives:')):
+            current_key = line.split(':')[0].strip()
+        elif current_key and line.startswith('-'):
+            data[current_key].append(line[1:].strip())
+
+    return data
+
+def sanitize_result(result):
+    required_keys = [
+        "report_title", "audit_organization", "audit_objectives",
+        "overall_conclusion", "key_findings", "recommendations",
+        "llm_insight", "potential_audit_objectives"
+    ]
+
+    sanitized = {}
+    for key in required_keys:
+        if key in result:
+            value = result[key]
+            if isinstance(value, str):
+                sanitized[key] = value.strip().rstrip(',').strip('"')
+            elif isinstance(value, list):
+                sanitized[key] = [item.strip().rstrip(',').strip('"') for item in value if item.strip()]
+            else:
+                sanitized[key] = value
+        else:
+            sanitized[key] = "N/A" if key in ["report_title", "audit_organization", "overall_conclusion", "llm_insight"] else []
+
+    return sanitized
 
 def analyze_report(content, ai_model='gpt-4o-mini'):
     if ai_model == 'claude-sonnet':
