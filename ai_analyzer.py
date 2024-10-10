@@ -15,14 +15,14 @@ def analyze_report_with_claude(content):
     {content[:4000]}  # Limiting to 4000 characters to avoid token limit
 
     Please provide the following information in a structured JSON format:
-    1. "report_title": The title of the audit report
-    2. "audit_organization": The organization that conducted the audit
-    3. "audit_objectives": A list of the main objectives of the audit
-    4. "overall_conclusion": The overall conclusion or summary of the audit findings
-    5. "key_findings": A list of the main findings from the audit
-    6. "recommendations": A list of recommendations based on the audit findings
-    7. "llm_insight": Your insights or analysis based on the report content
-    8. "potential_audit_objectives": A list of potential objectives for future audits based on this report
+    1. "report_title": The title of the audit report.
+    2. "audit_organization": The federal or state organization that conducted the audit and published the report.
+    3. "audit_objectives": A list of the main objectives of the audit.
+    4. "overall_conclusion": The overall conclusion or summary of the audit findings.
+    5. "key_findings": A list of the main findings from the audit.
+    6. "recommendations": A list of recommendations based on the audit findings.
+    7. "llm_insight": Your insights or analysis based on the report content.
+    8. "potential_audit_objectives": A list of useful potential audit objectives for future audits based on this report.
 
     Ensure your response is a valid JSON object with these exact keys and nothing else.
     If you're unsure about any field, use "N/A" for string fields or an empty list for list fields.
@@ -44,22 +44,29 @@ def analyze_report_with_claude(content):
             logging.info(f"Claude API raw response: {result}")
             
             try:
-                parsed_result = json.loads(result)
-            except json.JSONDecodeError:
-                logging.warning("JSON parsing failed. Falling back to text extraction.")
+                json_start = result.find('{')
+                json_end = result.rfind('}') + 1
+                if json_start != -1 and json_end != -1:
+                    json_str = result[json_start:json_end]
+                    parsed_result = json.loads(json_str)
+                else:
+                    raise ValueError("No valid JSON found in the response")
+            except (json.JSONDecodeError, ValueError) as json_error:
+                logging.warning(f"JSON parsing failed: {json_error}. Falling back to text extraction.")
                 parsed_result = extract_structured_data(result)
 
             sanitized_result = sanitize_result(parsed_result)
+            logging.info(f"Sanitized result: {sanitized_result}")
 
             return {"success": True, "data": sanitized_result}
 
         except AnthropicRateLimitError as e:
+            logging.error(f"Claude rate limit error: {e}")
             if attempt < max_retries - 1:
                 delay = base_delay * (2**attempt)
                 logging.warning(f"Claude rate limit reached. Retrying in {delay} seconds...")
                 time.sleep(delay)
             else:
-                logging.error(f"Claude rate limit error after {max_retries} attempts: {e}")
                 return {
                     "success": False,
                     "error": "We're experiencing high demand. Please try again in a few minutes."
@@ -90,14 +97,14 @@ def analyze_report_with_gpt4(content):
     {content[:4096]}  # Limiting to 4096 characters to avoid token limit
 
     Please provide the following information in a valid JSON format:
-    1. "report_title": The title of the audit report
-    2. "audit_organization": The organization that conducted the audit
-    3. "audit_objectives": A list of the main objectives of the audit
-    4. "overall_conclusion": The overall conclusion or summary of the audit findings
-    5. "key_findings": A list of the main findings from the audit
-    6. "recommendations": A list of recommendations based on the audit findings
-    7. "llm_insight": Your insights or analysis based on the report content
-    8. "potential_audit_objectives": A list of potential objectives for future audits based on this report
+    1. "report_title": The title of the audit report.
+    2. "audit_organization": The federal or state organization that conducted the audit and published the report.
+    3. "audit_objectives": A list of the main objectives of the audit.
+    4. "overall_conclusion": The overall conclusion or summary of the audit findings.
+    5. "key_findings": A list of the main findings from the audit.
+    6. "recommendations": A list of recommendations based on the audit findings.
+    7. "llm_insight": Your insights or analysis based on the report content.
+    8. "potential_audit_objectives": A list of useful potential audit objectives for future audits based on this report.
 
     Ensure your response is a valid JSON object with these exact keys and nothing else.
     If you're unsure about any field, use "N/A" for string fields or an empty list for list fields.

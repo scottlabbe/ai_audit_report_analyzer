@@ -68,7 +68,7 @@ def download_markdown():
 ## AI-Generated Insight
 {data['llm_insight']}
 
-## Potential Future Audit Objectives
+## AI-Generated Potential Future Audit Objectives
 {chr(10).join(['- ' + objective for objective in data['potential_audit_objectives']])}
 """
 
