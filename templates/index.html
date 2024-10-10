@@ -122,18 +122,21 @@
             };
 
             resultContent.innerHTML = `
-                <h3 class="font-bold">${safeContent.report_title}</h3>
-                <p><strong>Audit Organization:</strong> ${safeContent.audit_organization}</p>
-                <p><strong>Audit Objectives:</strong></p>
-                <ul class="list-disc pl-5 mb-4">${safeContent.audit_objectives.map(o => `<li>${o}</li>`).join('')}</ul>
-                <p><strong>Overall Conclusion:</strong> ${safeContent.overall_conclusion}</p>
-                <h4 class="font-semibold mt-4">Key Findings:</h4>
-                <ul class="list-disc pl-5 mb-4">${safeContent.key_findings.map(f => `<li>${f}</li>`).join('')}</ul>
-                <h4 class="font-semibold mt-4">Recommendations:</h4>
-                <ul class="list-disc pl-5 mb-4">${safeContent.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
-                <p><strong>AI-Generated Insight:</strong> ${safeContent.llm_insight}</p>
-                <h4 class="font-semibold mt-4">Potential Future Audit Objectives:</h4>
-                <ul class="list-disc pl-5 mb-4">${safeContent.potential_audit_objectives.map(o => `<li>${o}</li>`).join('')}</ul>
+                <h3 class="text-xl font-bold mb-4">${safeContent.report_title.replace(/"+$/, '')}</h3>
+                <h4 class="font-semibold mt-4 mb-2">Audit Organization</h4>
+                <p>${safeContent.audit_organization.replace(/"+$/, '')}</p>
+                <h4 class="font-semibold mt-4 mb-2">Audit Objectives</h4>
+                <ul class="list-disc pl-5 mb-4">${safeContent.audit_objectives.map(o => `<li>${o.replace(/"+$/, '')}</li>`).join('')}</ul>
+                <h4 class="font-semibold mt-4 mb-2">Overall Conclusion</h4>
+                <p>${safeContent.overall_conclusion.replace(/"+$/, '')}</p>
+                <h4 class="font-semibold mt-4 mb-2">Key Findings</h4>
+                <ul class="list-disc pl-5 mb-4">${safeContent.key_findings.map(f => `<li>${f.replace(/"+$/, '')}</li>`).join('')}</ul>
+                <h4 class="font-semibold mt-4 mb-2">Recommendations</h4>
+                <ul class="list-disc pl-5 mb-4">${safeContent.recommendations.map(r => `<li>${r.replace(/"+$/, '')}</li>`).join('')}</ul>
+                <h4 class="font-semibold mt-4 mb-2">AI-Generated Insight</h4>
+                <p>${safeContent.llm_insight.replace(/"+$/, '')}</p>
+                <h4 class="font-semibold mt-4 mb-2">Potential Future Audit Objectives</h4>
+                <ul class="list-disc pl-5 mb-4">${safeContent.potential_audit_objectives.map(o => `<li>${o.replace(/"+$/, '')}</li>`).join('')}</ul>
             `;
             analysisResult.classList.remove('hidden');
         }
