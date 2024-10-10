@@ -152,9 +152,9 @@ def analyze_report_with_gpt4(content):
 
     for attempt in range(max_retries):
         try:
-            logging.info(f"Attempt {attempt + 1} to analyze report with GPT-4")
+            logging.info(f"Attempt {attempt + 1} to analyze report with GPT-4o-mini")
             response = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",  # Updated to use GPT-4o-mini
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=4096
             )
@@ -224,7 +224,7 @@ def analyze_report_with_gpt4(content):
         "error": "Unable to process the report after multiple attempts. Please try again later."
     }
 
-def analyze_report(content, ai_model='gpt-4'):
+def analyze_report(content, ai_model='gpt-4o-mini'):
     if ai_model == 'claude-sonnet':
         return analyze_report_with_claude(content)
     else:
