@@ -26,6 +26,8 @@ def upload_file():
             return jsonify({'error': 'No selected file'}), 400
         if file and file.filename.lower().endswith('.pdf'):
             filename = secure_filename(file.filename)
+            # Store the original filename without extension
+            original_filename = os.path.splitext(filename)[0]
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
             
@@ -36,7 +38,7 @@ def upload_file():
             if not analysis_result['success']:
                 return jsonify({'error': analysis_result['error']}), 500
             
-            return jsonify({'message': 'File uploaded and analyzed successfully', 'data': analysis_result['data']}), 200
+            return jsonify({'message': 'File uploaded and analyzed successfully', 'data': analysis_result['data'], 'original_filename': original_filename}), 200
         return jsonify({'error': 'Invalid file type'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -48,13 +50,16 @@ def download_markdown():
         if not data:
             return jsonify({'error': 'No data provided'}), 400
 
+        original_filename = data.get('original_filename', 'analysis_result')
+        markdown_filename = f"{original_filename}_Summary.md"
+
         markdown_content = f"""# {data['report_title']}
 
 ## Audit Organization
 {data['audit_organization']}
 
 ## Audit Objectives
-{', '.join(data['audit_objectives'])}
+{chr(10).join(['- ' + objective for objective in data['audit_objectives']])}
 
 ## Overall Conclusion
 {data['overall_conclusion']}
@@ -79,7 +84,7 @@ def download_markdown():
         return send_file(
             buffer,
             as_attachment=True,
-            download_name=f"{data['report_title']}.md",
+            download_name=markdown_filename,
             mimetype='text/markdown'
         )
     except Exception as e:

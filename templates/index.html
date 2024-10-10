@@ -88,6 +88,7 @@
                 hideLoadingIndicator();
                 if (data.data) {
                     currentAnalysisResult = data.data;
+                    currentAnalysisResult.original_filename = data.original_filename;
                     displayAnalysis(data.data);
                 } else if (data.error) {
                     alert('Error: ' + data.error);
@@ -154,7 +155,10 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(currentAnalysisResult)
+                body: JSON.stringify({
+                    ...currentAnalysisResult,
+                    original_filename: currentAnalysisResult.original_filename || 'analysis_result'
+                })
             })
             .then(response => {
                 hideLoadingIndicator();
@@ -168,7 +172,7 @@
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
-                a.download = `${currentAnalysisResult.report_title || 'analysis_result'}.md`;
+                a.download = `${currentAnalysisResult.original_filename || 'analysis_result'}_Summary.md`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
