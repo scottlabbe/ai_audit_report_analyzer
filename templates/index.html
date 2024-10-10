@@ -111,32 +111,32 @@
             }
 
             const safeContent = {
-                report_title: content.report_title || 'N/A',
-                audit_organization: content.audit_organization || 'N/A',
-                audit_objectives: Array.isArray(content.audit_objectives) ? content.audit_objectives : ['N/A'],
-                overall_conclusion: content.overall_conclusion || 'N/A',
-                key_findings: Array.isArray(content.key_findings) ? content.key_findings : ['N/A'],
-                recommendations: Array.isArray(content.recommendations) ? content.recommendations : ['N/A'],
-                llm_insight: content.llm_insight || 'N/A',
-                potential_audit_objectives: Array.isArray(content.potential_audit_objectives) ? content.potential_audit_objectives : ['N/A']
+                report_title: (content.report_title || 'N/A').replace(/[",]+$/, ''),
+                audit_organization: (content.audit_organization || 'N/A').replace(/[",]+$/, ''),
+                audit_objectives: Array.isArray(content.audit_objectives) ? content.audit_objectives.map(o => o.replace(/[",]+$/, '')) : ['N/A'],
+                overall_conclusion: (content.overall_conclusion || 'N/A').replace(/[",]+$/, ''),
+                key_findings: Array.isArray(content.key_findings) ? content.key_findings.map(f => f.replace(/[",]+$/, '')) : ['N/A'],
+                recommendations: Array.isArray(content.recommendations) ? content.recommendations.map(r => r.replace(/[",]+$/, '')) : ['N/A'],
+                llm_insight: (content.llm_insight || 'N/A').replace(/[",]+$/, ''),
+                potential_audit_objectives: Array.isArray(content.potential_audit_objectives) ? content.potential_audit_objectives.map(o => o.replace(/[",]+$/, '')) : ['N/A']
             };
 
             resultContent.innerHTML = `
-                <h3 class="text-xl font-bold mb-4">${safeContent.report_title.replace(/"+$/, '')}</h3>
+                <h3 class="text-xl font-bold mb-4">${safeContent.report_title}</h3>
                 <h4 class="font-semibold mt-4 mb-2">Audit Organization</h4>
-                <p>${safeContent.audit_organization.replace(/"+$/, '')}</p>
+                <p>${safeContent.audit_organization}</p>
                 <h4 class="font-semibold mt-4 mb-2">Audit Objectives</h4>
-                <ul class="list-disc pl-5 mb-4">${safeContent.audit_objectives.map(o => `<li>${o.replace(/"+$/, '')}</li>`).join('')}</ul>
+                <ul class="list-disc pl-5 mb-4">${safeContent.audit_objectives.map(o => `<li>${o}</li>`).join('')}</ul>
                 <h4 class="font-semibold mt-4 mb-2">Overall Conclusion</h4>
-                <p>${safeContent.overall_conclusion.replace(/"+$/, '')}</p>
+                <p>${safeContent.overall_conclusion}</p>
                 <h4 class="font-semibold mt-4 mb-2">Key Findings</h4>
-                <ul class="list-disc pl-5 mb-4">${safeContent.key_findings.map(f => `<li>${f.replace(/"+$/, '')}</li>`).join('')}</ul>
+                <ul class="list-disc pl-5 mb-4">${safeContent.key_findings.map(f => `<li>${f}</li>`).join('')}</ul>
                 <h4 class="font-semibold mt-4 mb-2">Recommendations</h4>
-                <ul class="list-disc pl-5 mb-4">${safeContent.recommendations.map(r => `<li>${r.replace(/"+$/, '')}</li>`).join('')}</ul>
+                <ul class="list-disc pl-5 mb-4">${safeContent.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
                 <h4 class="font-semibold mt-4 mb-2">AI-Generated Insight</h4>
-                <p>${safeContent.llm_insight.replace(/"+$/, '')}</p>
+                <p>${safeContent.llm_insight}</p>
                 <h4 class="font-semibold mt-4 mb-2">Potential Future Audit Objectives</h4>
-                <ul class="list-disc pl-5 mb-4">${safeContent.potential_audit_objectives.map(o => `<li>${o.replace(/"+$/, '')}</li>`).join('')}</ul>
+                <ul class="list-disc pl-5 mb-4">${safeContent.potential_audit_objectives.map(o => `<li>${o}</li>`).join('')}</ul>
             `;
             analysisResult.classList.remove('hidden');
         }
